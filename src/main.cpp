@@ -1,73 +1,70 @@
-#include "wifi_server.h"
+#include "wifi_mqtt.h"
 #include "battery.h"
 #include "memory.h"
+#include "pumps.h"
+#include "sensors.h"
 #include <time.h>
 
 void setup() {
 	delay(500);
 	setCpuFrequencyMhz(80);
-	pinMode(PUMP_PIN, OUTPUT);
-	pinMode(LED_BUILTIN, OUTPUT);
-	/*
-		Note about FULL_SWITCH: I'm using the Firebeetle 2 board for its low power consumption, but it has a small problem.
-		Differently from all other ESP32 boards I've tried so far, when this board is put into hibernation mode it keeps sending power to the external components through its 3.3/VCC pin.
-		This increases by a lot the overall system power consumption: the moisture sensor consumes a constant current of 10 mA which, compared to the uA consumption expected of the board, is a lot.
-		To avoid this problem, I had to add a second relay which acts as a general switch and is switched off when the board goes into hibernation.
-		This way, only the board and this single relay are powered during hibernation, keeping the current consumption in the uA range.
-	*/
-	pinMode(FULL_SWITCH, OUTPUT);
-	pinMode(MOISTURE_READING_PIN, INPUT);
-	digitalWrite(PUMP_PIN, LOW);
-	digitalWrite(LED_BUILTIN, HIGH);
-	digitalWrite(FULL_SWITCH, HIGH);
 	Serial.begin(115200);
 	while(!Serial);
+	for(uint8_t i=0;i<numPlants;i++){
+		pinMode(pumpPins[i], OUTPUT);
+		digitalWrite(pumpPins[i], LOW);
+		pinMode(sensorPins[i], INPUT);
+	}
+	pinMode(LED_BUILTIN, OUTPUT);
+	digitalWrite(LED_BUILTIN, HIGH);
+	pinMode(sensorsSwitch, OUTPUT);
+	digitalWrite(sensorsSwitch, LOW);
+	// Connect to Wifi and MQTT broker
 	wifi_mqtt_connect();
-	// Start code to wet the plant
-	logger.log("Reading soil moisture");
-	read_soil_moisture_percent_average();
-	createJson<float>(soilMoisture.value);
+	// Read all sensors at once
+	read_all_sensors();
 	// Start memory
 	preferences.begin(variablesNamespace, false);
 	// Get the last time the pump was run
 	// and compute the seconds since it happenend
-	time_t diffTime = difftime(time(NULL), preferences.getInt(timeVar));
-	logger.log("Seconds since last run: "+String(diffTime));
+	time_t diffTime[numPlants] {0};
+	for(uint8_t i=0;i<numPlants;i++){
+		diffTime[i] = difftime(time(NULL), pumpState[i].lastRunMemoryVar.value);
+		Serial.println("Seconds since last run: "+String(diffTime[i]));
+		Serial.println("diffTime >= wateringTime: "+String(diffTime[i] >= (wateringTime[i].memoryVar.value * 3600)));
+		Serial.println("soilMoisture < moistureTresh: "+String(soilMoisture[i].percVoltage.value < moistureTresh[i].memoryVar.value));
+		if(pumpOverride[i].memoryVar.value || (pumpSwitch[i].memoryVar.value && (diffTime[i] >= (wateringTime[i].memoryVar.value * 3600)) && (soilMoisture[i].percVoltage.value < moistureTresh[i].memoryVar.value))){
+			Serial.println("Running pump for "+String(pumpRuntime[i].memoryVar.value)+" seconds");
+			digitalWrite(pumpPins[i], HIGH);
+			if(mqttConnected){
+				esp_mqtt_client_publish(client, pumpState[i].stateTopic.c_str(), "on", 2, 1, 0);
+				delay(pumpRuntime[i].memoryVar.value * sToMs);
+				digitalWrite(pumpPins[i], LOW);
+				esp_mqtt_client_publish(client, pumpState[i].stateTopic.c_str(), "off", 3, 1, 0);
+			} else {
+				delay(pumpRuntime[i].memoryVar.value * sToMs);
+				digitalWrite(pumpPins[i], LOW);
+			}
+			// Set the last time the pump was run
+			pumpState[i].lastRunMemoryVar.setValue(time(NULL));
+		}
+		else{
+			Serial.println("Condition to water plant not met, pump is off");
+			if(mqttConnected){
+				esp_mqtt_client_publish(client, pumpState[i].stateTopic.c_str(), "off", 3, 1, 0);
+			}
+		}
+	}
 	preferences.end();
-	logger.log("diffTime >= wateringTime: "+String(diffTime >= (wateringTime.value * 3600)));
-	logger.log("soilMoisture < moistureTresh: "+String(soilMoisture.value < moistureTresh.value));
-	if(pumpOverride.value || (pumpSwitch.value && (diffTime >= (wateringTime.value * 3600)) && (soilMoisture.value < moistureTresh.value))){
-		logger.log("Running pump for "+String(pumpRuntime.value)+" seconds");
-		digitalWrite(PUMP_PIN, HIGH);
-		if(mqttConnected){
-			esp_mqtt_client_publish(client, pump.stateTopic.c_str(), "on", 2, 1, 0);
-			delay(pumpRuntime.value * sToMs);
-			digitalWrite(PUMP_PIN, LOW);
-			esp_mqtt_client_publish(client, pump.stateTopic.c_str(), "off", 3, 1, 0);
-		} else {
-			delay(pumpRuntime.value * sToMs);
-			digitalWrite(PUMP_PIN, LOW);
-		}
-		preferences.begin(variablesNamespace, false);
-		// Set the last time the pump was run
-		preferences.putInt(timeVar, time(NULL));
-		preferences.end();
-	}
-	else{
-		logger.log("Condition to water plant not met, pump is off");
-		if(mqttConnected){
-			esp_mqtt_client_publish(client, pump.stateTopic.c_str(), "off", 3, 1, 0);
-		}
-	}
 	delay(1000);
 	// Read battery voltage
 	float batteryVoltage = read_battery();
-	logger.log("Battery voltage: "+String(batteryVoltage));
+	Serial.println("Battery voltage: "+String(batteryVoltage));
 	if(mqttConnected){
 		// Send an off state to mean the pump/board is going to sleep and disconnect
-		esp_mqtt_client_publish(client, soilMoisture.stateTopic.c_str(), buffer, 0, 1, 1);
-		esp_mqtt_client_publish(client, pump.availabilityTopic.c_str(), "off", 3, 1, 0);
-		esp_mqtt_client_publish(client, soilMoisture.availabilityTopic.c_str(), "off", 3, 1, 0);
+		for(uint8_t i=0;i<numPlants;i++){
+			esp_mqtt_client_publish(client, pumpState[i].availabilityTopic.c_str(), "off", 3, 1, 0);
+		}
 		//Send battery voltage
 		createJson<float>(batteryVoltage);
 		esp_mqtt_client_publish(client, "battery/state", buffer, 0, 1, 1);
@@ -78,18 +75,18 @@ void setup() {
 	esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_PERIPH, ESP_PD_OPTION_OFF);
 	esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_SLOW_MEM, ESP_PD_OPTION_OFF);
 	esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_FAST_MEM, ESP_PD_OPTION_OFF);
-	//If battery voltage is too low, set deep sleep to be infinite (i.e. hibernate)
+	// If battery voltage is too low, set deep sleep to be infinite (i.e. hibernate)
 	if(batteryVoltage>CRITICALLY_LOW_BATTERY_VOLTAGE){
-		logger.log("Setting timer wakeup to "+String(samplingTime.value)+" seconds");
-		esp_sleep_enable_timer_wakeup((unsigned long) samplingTime.value * sToUs);
-		logger.log("Going into hibernation for "+String(samplingTime.value)+" seconds");
+		Serial.println("Setting timer wakeup to "+String(samplingTime.memoryVar.value)+" seconds");
+		esp_sleep_enable_timer_wakeup((unsigned long) samplingTime.memoryVar.value * sToUs);
+		Serial.println("Going into hibernation for "+String(samplingTime.memoryVar.value)+" seconds");
 	}
 	else{
-		logger.log("Hibernating without timer due to low battery charge.");
+		Serial.println("Hibernating without timer due to low battery charge.");
 	}
-	//disconnect
+	// Disconnect
 	wifi_mqtt_disconnect();
-	// hibernation
+	// Hibernate
 	esp_deep_sleep_start();
 }
 

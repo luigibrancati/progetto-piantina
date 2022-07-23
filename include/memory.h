@@ -5,6 +5,7 @@
 #include <mqtt_client.h>
 
 Preferences preferences;
+static constexpr short numPlants = 6;
 static constexpr int sToUs = 1000000;
 static constexpr int connectionTimeoutSeconds = 10;
 RTC_DATA_ATTR int boot = 0;
@@ -14,22 +15,6 @@ static constexpr int sToMs = 1000; // Conversion from Seconds to mS
 static constexpr long DefaultMS_minute = 60 * sToMs; //Milliseconds per minute
 static constexpr long DefaultMS_hour = (long)DefaultMS_minute*60; //Milliseconds per hour
 static constexpr String variablesNamespace = "variables";
-static constexpr String timeVar = "time";
-
-struct MQTTtopics {
-
-	MQTTtopics():
-		commandTopic("debug"),
-		stateTopic("debug"),
-		availabilityTopic("debug"),
-		debugTopic("debug")
-	{}
-
-	String commandTopic;
-	String stateTopic;
-	String availabilityTopic;
-	String debugTopic;
-};
 
 struct MemoryVarInt {
 	String memoryKey;
@@ -45,18 +30,18 @@ struct MemoryVarInt {
 	}
 
 	void updateFromMemory(){
-		logger.log("Getting "+memoryKey+" variable from memory");
+		Serial.println("Getting "+memoryKey+" variable from memory");
 		this->value = this->getFromMemory();
-		logger.log(memoryKey+" value: "+String(this->value));
+		Serial.println(memoryKey+" value: "+String(this->value));
 	}
 
 	void saveToMemory(){
-		logger.log("Saving "+memoryKey+" variable to memory");
+		Serial.println("Saving "+memoryKey+" variable to memory");
 		if(this->value != this->getFromMemory()) {
 			preferences.putInt(this->memoryKey.c_str(), this->value);
-			logger.log("Saved "+memoryKey+" value: "+String(this->value));
+			Serial.println("Saved "+memoryKey+" value: "+String(this->value));
 		} else {
-			logger.log(memoryKey+" hasn't changed");
+			Serial.println(memoryKey+" hasn't changed");
 		}
 	}
 
@@ -80,18 +65,18 @@ struct MemoryVarFloat {
 	}
 
 	void updateFromMemory(){
-		logger.log("Getting "+memoryKey+" variable from memory");
+		Serial.println("Getting "+memoryKey+" variable from memory");
 		this->value = this->getFromMemory();
-		logger.log(memoryKey+" value: "+String(this->value));
+		Serial.println(memoryKey+" value: "+String(this->value));
 	}
 
 	void saveToMemory(){
-		logger.log("Saving "+memoryKey+" variable to memory");
+		Serial.println("Saving "+memoryKey+" variable to memory");
 		if(this->value != this->getFromMemory()) {
 			preferences.putFloat(this->memoryKey.c_str(), this->value);
-			logger.log("Saved "+memoryKey+" value: "+String(this->value));
+			Serial.println("Saved "+memoryKey+" value: "+String(this->value));
 		} else {
-			logger.log(memoryKey+" hasn't changed");
+			Serial.println(memoryKey+" hasn't changed");
 		}
 	}
 
@@ -115,18 +100,18 @@ struct MemoryVarBool {
 	}
 
 	void updateFromMemory(){
-		logger.log("Getting "+memoryKey+" variable from memory");
+		Serial.println("Getting "+memoryKey+" variable from memory");
 		this->value = this->getFromMemory();
-		logger.log(memoryKey+" value: "+String(this->value));
+		Serial.println(memoryKey+" value: "+String(this->value));
 	}
 
 	void saveToMemory(){
-		logger.log("Saving "+memoryKey+" variable to memory");
+		Serial.println("Saving "+memoryKey+" variable to memory");
 		if(this->value != this->getFromMemory()) {
 			preferences.putBool(this->memoryKey.c_str(), this->value);
-			logger.log("Saved "+memoryKey+" value: "+String(this->value));
+			Serial.println("Saved "+memoryKey+" value: "+String(this->value));
 		} else {
-			logger.log(memoryKey+" hasn't changed");
+			Serial.println(memoryKey+" hasn't changed");
 		}
 	}
 
@@ -187,7 +172,7 @@ struct WaterValue: MQTTtopics {
 } waterValue;
 
 void getGeneralVarsFromMemory(){
-	logger.log("Getting all general variables from memory");
+	Serial.println("Getting all general variables from memory");
 	preferences.begin(variablesNamespace.c_str(), false);
 	airValue.memoryVar.updateFromMemory();
 	waterValue.memoryVar.updateFromMemory();

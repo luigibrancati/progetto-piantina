@@ -10,6 +10,20 @@
 #include "esp_tls.h"
 #include <ArduinoJson.h>
 
+struct MQTTtopics {
+	MQTTtopics():
+		commandTopic("debug"),
+		stateTopic("debug"),
+		availabilityTopic("debug"),
+		debugTopic("debug")
+	{}
+
+	String commandTopic;
+	String stateTopic;
+	String availabilityTopic;
+	String debugTopic;
+};
+
 static constexpr char SSID[] = "ssid";    // Network SSID (name)
 static constexpr char PASS[] = "pass";    // Network password (use for WPA, or use as key for WEP)
 static constexpr char MQTTBrokerIP[] = "192.168.1.84";
@@ -46,73 +60,73 @@ static esp_err_t messageHandler(esp_mqtt_event_handle_t event){
 	String event_data = convert_to_string(event->data, event->data_len);
 	preferences.begin(variablesNamespace, false);
 	if(event_topic==pumpOverride.commandTopic){
-		logger.log("Received command for Pump Override");
+		Serial.println("Received command for Pump Override");
 		if (event_data == "on") {
-			logger.log("Turning Pump Override on");
+			Serial.println("Turning Pump Override on");
 			pumpOverride.value = true;
 			esp_mqtt_client_publish(client, pumpOverride.stateTopic.c_str(), "on", 2, 1, 1);
 		}
 		else if (event_data == "off") {
-			logger.log("Turning Pump Override off");
+			Serial.println("Turning Pump Override off");
 			pumpOverride.value = false;
 			esp_mqtt_client_publish(client, pumpOverride.stateTopic.c_str(), "off", 3, 1, 1);
 		}
-		logger.log("pumpOverride value: "+String(pumpOverride.value));
+		Serial.println("pumpOverride value: "+String(pumpOverride.value));
 		updateVar(pumpOverride.value, pumpOverride.key);
 	}
 	else if(event_topic==pumpSwitch.commandTopic){
-		logger.log("Received command for Pump Switch");
+		Serial.println("Received command for Pump Switch");
 		if (event_data == "on") {
-			logger.log("Turning Pump Switch on");
+			Serial.println("Turning Pump Switch on");
 			pumpSwitch.value = true;
 			esp_mqtt_client_publish(client, pumpSwitch.stateTopic.c_str(), "on", 2, 1, 1);
 		}
 		else if (event_data == "off") {
-			logger.log("Turning Pump Switch off");
+			Serial.println("Turning Pump Switch off");
 			pumpSwitch.value = false;
 			esp_mqtt_client_publish(client, pumpSwitch.stateTopic.c_str(), "off", 3, 1, 1);
 		}
-		logger.log("pumpSwitch value: "+String(pumpSwitch.value));
+		Serial.println("pumpSwitch value: "+String(pumpSwitch.value));
 		updateVar(pumpSwitch.value, pumpSwitch.key);
 	}
 	else if(event_topic==moistureTresh.stateTopic){
-		logger.log("Received moisture_tresh");
+		Serial.println("Received moisture_tresh");
 		moistureTresh.value = event_data.toFloat();
-		logger.log("moisture_tresh value: "+String(moistureTresh.value));
+		Serial.println("moisture_tresh value: "+String(moistureTresh.value));
 		updateVar(moistureTresh.value, moistureTresh.key);
 	}
 	else if(event_topic==airValue.stateTopic){
-		logger.log("Received air_value");
+		Serial.println("Received air_value");
 		airValue.value = event_data.toFloat();
-		logger.log("air_value value: "+String(airValue.value));
+		Serial.println("air_value value: "+String(airValue.value));
 		updateVar(airValue.value, airValue.key);
 	}
 	else if(event_topic==waterValue.stateTopic){
-		logger.log("Received water_value");
+		Serial.println("Received water_value");
 		waterValue.value = event_data.toFloat();
-		logger.log("water_value value: "+String(waterValue.value));
+		Serial.println("water_value value: "+String(waterValue.value));
 		updateVar(waterValue.value, waterValue.key);
 	}
 	else if(event_topic==samplingTime.stateTopic){
-		logger.log("Received sampling_time");
+		Serial.println("Received sampling_time");
 		samplingTime.value = event_data.toInt();
-		logger.log("sampling_time value: "+String(samplingTime.value));
+		Serial.println("sampling_time value: "+String(samplingTime.value));
 		updateVar(samplingTime.value, samplingTime.key);
 	}
 	else if(event_topic==pumpRuntime.stateTopic){
-		logger.log("Received pump_runtime");
+		Serial.println("Received pump_runtime");
 		pumpRuntime.value = event_data.toInt();
-		logger.log("pump_runtime value: "+String(pumpRuntime.value));
+		Serial.println("pump_runtime value: "+String(pumpRuntime.value));
 		updateVar(pumpRuntime.value, pumpRuntime.key);
 	}
 	else if(event_topic==wateringTime.stateTopic){
-	    logger.log("Received watering_time");
+	    Serial.println("Received watering_time");
 	    wateringTime.value = event_data.toInt();
-	    logger.log("watering_time value: "+String(wateringTime.value));
+	    Serial.println("watering_time value: "+String(wateringTime.value));
 		updateVar(wateringTime.value, wateringTime.key);
 	}
 	else{
-		logger.log("Received unknown topic "+event_topic);
+		Serial.println("Received unknown topic "+event_topic);
 	}
 	preferences.end();
 }
@@ -120,8 +134,8 @@ static esp_err_t messageHandler(esp_mqtt_event_handle_t event){
 static esp_err_t mqtt_event_callback_handler(esp_mqtt_event_handle_t event) {
 	switch(event->event_id){
 		case MQTT_EVENT_CONNECTED:
-			logger.log("MQTT connection established");
-			logger.log("Fetching variables from the broker.");
+			Serial.println("MQTT connection established");
+			Serial.println("Fetching variables from the broker.");
 			mqttConnected = true;
 			logger.mqttConnected = mqttConnected;
 			// Send an on state to mean the pump/board has started and is connected
@@ -137,7 +151,7 @@ static esp_err_t mqtt_event_callback_handler(esp_mqtt_event_handle_t event) {
 			esp_mqtt_client_subscribe(client, samplingTime.stateTopic.c_str(), 1);
 			esp_mqtt_client_subscribe(client, pumpRuntime.stateTopic.c_str(), 1);
 			esp_mqtt_client_subscribe(client, wateringTime.stateTopic.c_str(), 1);
-			logger.log("Subscribed to all topics");
+			Serial.println("Subscribed to all topics");
 			break;
 		case MQTT_EVENT_DISCONNECTED:
 			ESP_LOGI("TEST", "MQTT event: %d. MQTT_EVENT_DISCONNECTED", event->event_id);
@@ -180,41 +194,41 @@ void client_setup(){
 void wifi_mqtt_connect(){
 	client_setup();
 	WiFi.begin(SSID, PASS);
-	logger.log("Connecting", false);
+	Serial.println("Connecting", false);
 	while(!WiFi.isConnected() && millis() < (connectionTimeoutSeconds * sToMs)) {
-		logger.log(".", false);
+		Serial.println(".", false);
 		delay(100);
 	}
 	esp_err_t err = esp_tls_set_global_ca_store(DSTroot_CA, sizeof(DSTroot_CA));
 	client = esp_mqtt_client_init(&mqtt_cfg);
 	logger.client = client;
 	if(WiFi.isConnected()){
-		logger.log("Connected: "+WiFi.localIP().toString());
+		Serial.println("Connected: "+WiFi.localIP().toString());
 		err = esp_mqtt_client_start(client);
 		delay(connectionTimeoutSeconds * sToMs);
 		if(!mqttConnected){
 			// Stop the client, otherwise it'll attempt to connect again
 			esp_mqtt_client_stop(client);
 			logger.mqttConnected = mqttConnected;
-			logger.log("Couldn't connect to the MQTT broker.");
+			Serial.println("Couldn't connect to the MQTT broker.");
 			getAllFromMemory();
 		}
 	} else {
 		mqttConnected = false;
 		logger.mqttConnected = mqttConnected;
-		logger.log("Couldn't connect to the wifi.");
+		Serial.println("Couldn't connect to the wifi.");
 		getAllFromMemory();
 	}
 }
 
 void wifi_mqtt_disconnect(){
-	logger.log("Disconnecting");
+	Serial.println("Disconnecting");
 	esp_mqtt_client_destroy(client);
 	WiFi.disconnect();
 	logger.mqttConnected = false;
-	logger.log("Disconnecting", false);
+	Serial.println("Disconnecting", false);
 	while(WiFi.isConnected()){
-		logger.log(".", false);
+		Serial.println(".", false);
 		delay(100);
 	}
 }
