@@ -1,0 +1,34 @@
+blueprint:
+  name: Send Input Number Float
+  description: Sends a float input number value to a MQTT topic
+  domain: automation
+  input:
+    input_number:
+      name: Float Number
+      description: The number to be sent.
+      selector:
+        entity:
+          domain: input_number
+    seconds:
+      name: Seconds
+      description: The seconds to wait for the state change.
+    topic:
+      name: Topic
+      description: The topic to publish the message on.
+alias: Send Input Number Float Value
+description: 'This sends through MQTT the value of an input number'
+trigger:
+  - platform: state
+    entity_id: !input input_number
+    for:
+      hours: 0
+      minutes: 0
+      seconds: !input seconds
+condition: []
+action:
+  - service: mqtt.publish
+    data:
+      topic: !input topic
+      retain: true
+      payload: '{{ trigger.to_state.state | float }}'
+mode: single

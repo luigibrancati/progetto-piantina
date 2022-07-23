@@ -1,0 +1,47 @@
+blueprint:
+  name: Set Switch Value
+  description: Set the switch based on MQTT messages
+  domain: automation
+  input:
+    input_boolean:
+      name: Switch
+      description: The switch to update.
+      selector:
+        entity:
+          domain: input_boolean
+    topic:
+      name: Topic
+      description: The topic to subscribe.
+
+alias: Set Switch Value
+description: 'Set the value of a switch based on MQTT states'
+trigger:
+- platform: mqtt
+  topic: !input topic
+  id: switch_off
+  payload: 'off'
+- platform: mqtt
+  topic: !input topic
+  id: switch_on
+  payload: 'on'
+condition: []
+action:
+- choose:
+  - conditions:
+    - condition: trigger
+      id: switch_on
+    sequence:
+    - service: input_boolean.turn_on
+      data: {}
+      target:
+        entity_id: !input input_boolean
+  - conditions:
+    - condition: trigger
+      id: pump_off
+    sequence:
+    - service: input_boolean.turn_off
+      data: {}
+      target:
+        entity_id: !input input_boolean
+  default: []
+mode: single

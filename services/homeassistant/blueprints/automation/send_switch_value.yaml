@@ -1,0 +1,35 @@
+blueprint:
+  name: Send Switch Value
+  description: Sends the status of a switch to an MQTT topic
+  domain: automation
+  input:
+    input_boolean:
+      name: Switch 
+      description: The switch status to be sent.
+      selector:
+        entity:
+          domain: input_boolean
+    seconds:
+      name: Seconds
+      description: The seconds to wait for the state change.
+    topic:
+      name: Topic
+      description: The topic to send the switch state.
+
+alias: Send Switch Value
+description: 'This sends through MQTT the status of a switch'
+trigger:
+  - platform: state
+    entity_id: !input input_boolean
+    for:
+      hours: 0
+      minutes: 0
+      seconds: !input seconds
+condition: []
+action:
+- service: mqtt.publish
+  data:
+    topic: !input topic
+    retain: true
+    payload: '{{ trigger.to_state.state }}'
+mode: single

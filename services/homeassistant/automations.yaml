@@ -1,0 +1,88 @@
+- id: '1647684833482'
+  alias: Send Pump Switch Value
+  description: Sends pump switch value to a MQTT topic.
+  use_blueprint:
+    path: send_switch_value.yaml
+    input:
+      input_boolean: input_boolean.switch_pump
+      seconds: '10'
+      topic: abegghome/pump_switch/com
+- id: '1647684877633'
+  alias: Set Pump Switch Value
+  description: Subscribes to a MQTT topic and listens for values
+  use_blueprint:
+    path: set_switch_value.yaml
+    input:
+      input_boolean: input_boolean.switch_pump
+      topic: abegghome/pump_switch/state
+- id: '1647704533398'
+  alias: Send Air Value
+  description: Send air value to a MQTT topic.
+  use_blueprint:
+    path: send_input_number_value.yaml
+    input:
+      input_number: input_number.air_value
+      topic: abegghome/air_value/state
+      seconds: '10'
+- id: '1647711883878'
+  alias: Send Water Value
+  description: Send water value to a MQTT topic.
+  use_blueprint:
+    path: send_input_number_value.yaml
+    input:
+      input_number: input_number.water_value
+      topic: abegghome/water_value/state
+      seconds: '10'
+- id: '1647712015298'
+  alias: Send Pump Runtime Value
+  description: Send pump runtime value to a MQTT topic.
+  use_blueprint:
+    path: send_input_number_value.yaml
+    input:
+      input_number: input_number.pump_runtime
+      topic: abegghome/pump_runtime/state
+      seconds: '10'
+- id: '1647712846042'
+  alias: Send Moisture Sampling Time
+  description: Send moisture sampling time to a MQTT topic.
+  use_blueprint:
+    path: send_input_number_value.yaml
+    input:
+      seconds: '10'
+      input_number: input_number.moisture_sampling_time
+      topic: abegghome/sampling_time/state
+- id: '1647714130923'
+  alias: Send Watering Time
+  description: Send watering time to a MQTT topic.
+  use_blueprint:
+    path: send_input_number_value.yaml
+    input:
+      input_number: input_number.watering_time
+      seconds: '10'
+      topic: abegghome/watering_time/state
+- id: '1647716845257'
+  alias: Send Moisture Treshold
+  description: ''
+  use_blueprint:
+    path: send_input_number_float_value.yaml
+    input:
+      input_number: input_number.moisture_tresh
+      seconds: '10'
+      topic: abegghome/moisture_tresh/state
+- id: '1647783380728'
+  alias: Send Pump Override Value
+  description: Send Pump Override Value to a MQTT topic
+  use_blueprint:
+    path: send_switch_value.yaml
+    input:
+      input_boolean: input_boolean.pump_override
+      seconds: '10'
+      topic: abegghome/pump_override/com
+- id: '1647783417843'
+  alias: Set Pump Override Value
+  description: Subscribes to a MQTT topic and listens for values
+  use_blueprint:
+    path: set_switch_value.yaml
+    input:
+      input_boolean: input_boolean.pump_override
+      topic: abegghome/pump_override/state

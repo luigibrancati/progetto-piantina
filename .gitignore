@@ -3,3 +3,12 @@
 .vscode/c_cpp_properties.json
 .vscode/launch.json
 .vscode/ipch
+.DS_Store
+*.txt
+*test*
+*.log*
+*.db*
+*.passwd
+.cloud
+.storage
+.HA_VERSION
