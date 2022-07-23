@@ -11,7 +11,7 @@ struct WateringTime: MQTTtopics {
 		MQTTtopics(),
 		memoryVar("WateringTime"+String(i))
 	{
-		stateTopic = "abegghome/watering_time"+String(i)+"/state";
+		stateTopic = "abegghome/watering_time/"+String(i)+"/state";
 	}
 };
 
@@ -22,7 +22,7 @@ struct MoistureTresh: MQTTtopics {
 		MQTTtopics(),
 		memoryVar("MoistureTresh"+String(i))
 	{
-		stateTopic = "abegghome/moisture_tresh"+String(i)+"/state";
+		stateTopic = "abegghome/moisture_tresh/"+String(i)+"/state";
 	}
 };
 
@@ -33,8 +33,8 @@ struct PumpOverride: MQTTtopics {
 		MQTTtopics(),
 		memoryVar("PumpOverride"+String(i))
 	{
-		commandTopic = "abegghome/pump_override"+String(i)+"/com";
-		stateTopic = "abegghome/pump_override"+String(i)+"/state";
+		commandTopic = "abegghome/pump_override/"+String(i)+"/com";
+		stateTopic = "abegghome/pump_override/"+String(i)+"/state";
 	}
 };
 
@@ -45,8 +45,8 @@ struct PumpSwitch: MQTTtopics {
 		MQTTtopics(),
 		memoryVar("PumpSwitch"+String(i))
 	{
-		commandTopic = "abegghome/pump_switch"+String(i)+"/com";
-		stateTopic = "abegghome/pump_switch"+String(i)+"/state";
+		commandTopic = "abegghome/pump_switch/"+String(i)+"/com";
+		stateTopic = "abegghome/pump_switch/"+String(i)+"/state";
 	}
 };
 
@@ -57,8 +57,8 @@ struct PumpState: MQTTtopics {
 		MQTTtopics(),
 		lastRunMemoryVar("lastRunMemoryVar"+String(i))
 	{
-		stateTopic = "abegghome/pump"+String(i)+"/state";
-		availabilityTopic = "abegghome/pump"+String(i)+"/availability";
+		stateTopic = "abegghome/pump/"+String(i)+"/state";
+		availabilityTopic = "abegghome/pump/"+String(i)+"/availability";
 	}
 
 	int getFromMemory() override {
@@ -73,7 +73,7 @@ struct PumpRuntime: MQTTtopics {
 		MQTTtopics(),
 		memoryVar("PumpRuntime"+String(i))
 	{
-		stateTopic = "abegghome/pump_runtime"+String(i)+"/state";
+		stateTopic = "abegghome/pump_runtime/"+String(i)+"/state";
 	}
 };
 

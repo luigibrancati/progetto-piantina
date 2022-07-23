@@ -24,8 +24,8 @@ struct SoilMoisture: MQTTtopics {
 		rawVoltage("SoilMoistureRaw"+String(i)),
 		percVoltage("SoilMoisturePerc"+String(i))
 	{
-		stateTopic = "abegghome/moisture"+String(i)+"/state";
-		debugTopic = "abegghome/moisture"+String(i)+"/debug";
+		stateTopic = "abegghome/moisture/"+String(i)+"/state";
+		debugTopic = "abegghome/moisture/"+String(i)+"/debug";
 	}
 };
 
