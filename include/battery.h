@@ -3,7 +3,7 @@
 
 #include <esp_adc_cal.h>
 
-#define CRITICALLY_LOW_BATTERY_VOLTAGE 3.30
+static constexpr float CRITICALLY_LOW_BATTERY_VOLTAGE = 3.30;
 
 // Taken from https://github.com/Torxgewinde/Firebeetle-2-ESP32-E/blob/main/Firebeetle_DeepSleep.ino
 float read_battery() {
@@ -27,4 +27,4 @@ float read_battery() {
   return esp_adc_cal_raw_to_voltage(value, &adc_chars)*2.0/1000.0;
 }
 
-#END
+#endif
