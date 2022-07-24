@@ -49,8 +49,8 @@ void createJson(T value) {
 	serializeJson(sensorJson, buffer);
 }
 
-String convert_to_string(char* text, int len){
-	String out = "";
+std::string convert_to_string(char* text, int len){
+	std::string out = "";
 	for(char* l=text; l!=(text+len);l++){
 		out+=*l;
 	}
@@ -60,77 +60,67 @@ String convert_to_string(char* text, int len){
 static esp_err_t messageHandler(esp_mqtt_event_handle_t event){
 	std::string event_topic = convert_to_string(event->topic, event->topic_len);
 	std::string event_data = convert_to_string(event->data, event->data_len);
-	preferences.begin(variablesNamespace, false);
-	if(event_topic==pumpOverride.commandTopic){
-		Serial.println("Received command for Pump Override");
-		if (event_data == "on") {
-			Serial.println("Turning Pump Override on");
-			pumpOverride.value = true;
-			esp_mqtt_client_publish(client, pumpOverride.stateTopic.c_str(), "on", 2, 1, 1);
+	std::regex topic_regex("[\\w/]*/(\\w+)/(\\d{1,1})/[\\w/]*", std::regex::ECMAScript | std::regex::icase);
+	std::smatch matches;
+	if (std::regex_search(event_topic, matches, topic_regex)) {
+		Serial.println("Received command/value from "+event_topic);
+		preferences.begin(variablesNamespace, false);
+		uint8_t index = matches[2];
+		if(matches[1]==pumpOverride[0].classId){
+			if (event_data == "on") {
+				Serial.println("Turning Pump Override "+String(index)+" on");
+				pumpOverride[index].memoryVar.setValue(true);
+				esp_mqtt_client_publish(client, pumpOverride[index].stateTopic.c_str(), "on", 2, 1, 1);
+			}
+			else if (event_data == "off") {
+				Serial.println("Turning Pump Override "+String(index)+" off");
+				pumpOverride[index].memoryVar.setValue(false);
+				esp_mqtt_client_publish(client, pumpOverride[index].stateTopic.c_str(), "off", 3, 1, 1);
+			}
+			Serial.println("Pump Override "+String(index)+" value: "+String(pumpOverride[index].memoryVar.value));
 		}
-		else if (event_data == "off") {
-			Serial.println("Turning Pump Override off");
-			pumpOverride.value = false;
-			esp_mqtt_client_publish(client, pumpOverride.stateTopic.c_str(), "off", 3, 1, 1);
+		else if(matches[1]==pumpSwitch[0].classId){
+			if (event_data == "on") {
+				Serial.println("Turning Pump Switch "+String(index)+" on");
+				pumpSwitch[index].memoryVar.setValue(true);
+				esp_mqtt_client_publish(client, pumpSwitch[index].stateTopic.c_str(), "on", 2, 1, 1);
+			}
+			else if (event_data == "off") {
+				Serial.println("Turning Pump Switch "+String(index)+" off");
+				pumpSwitch[index].memoryVar.setValue(false);
+				esp_mqtt_client_publish(client, pumpSwitch[index].stateTopic.c_str(), "off", 3, 1, 1);
+			}
+			Serial.println("Pump Switch "+String(index)+" value: "+String(pumpSwitch[index].memoryVar.value));
 		}
-		Serial.println("pumpOverride value: "+String(pumpOverride.value));
-		updateVar(pumpOverride.value, pumpOverride.key);
-	}
-	else if(event_topic==pumpSwitch.commandTopic){
-		Serial.println("Received command for Pump Switch");
-		if (event_data == "on") {
-			Serial.println("Turning Pump Switch on");
-			pumpSwitch.value = true;
-			esp_mqtt_client_publish(client, pumpSwitch.stateTopic.c_str(), "on", 2, 1, 1);
+		else if(matches[1]==moistureTresh[0].classId){
+			moistureTresh[index].memoryVar.setValue(event_data.toFloat());
+			Serial.println("Moisture Tresh "+String(index)+" value: "+String(moistureTresh[index].memoryVar.value));
 		}
-		else if (event_data == "off") {
-			Serial.println("Turning Pump Switch off");
-			pumpSwitch.value = false;
-			esp_mqtt_client_publish(client, pumpSwitch.stateTopic.c_str(), "off", 3, 1, 1);
+		else if(matches[1]==airValue.classId){
+			airValue.memoryVar.setValue(event_data.toFloat());
+			Serial.println("Air Value value: "+String(airValue.memoryVar.value));
 		}
-		Serial.println("pumpSwitch value: "+String(pumpSwitch.value));
-		updateVar(pumpSwitch.value, pumpSwitch.key);
+		else if(matches[1]==waterValue.classId){
+			waterValue.memoryVar.setValue(event_data.toFloat());
+			Serial.println("Water Value value: "+String(waterValue.memoryVar.value));
+		}
+		else if(matches[1]==samplingTime.classId){
+			samplingTime.memoryVar.setValue(event_data.toInt());
+			Serial.println("Sampling Time value: "+String(samplingTime.memoryVar.value));
+		}
+		else if(matches[1]==pumpRuntime[0].classId){
+			pumpRuntime[index].memoryVar.setValue(event_data.toInt());
+			Serial.println("Pump Runtime "+String(index)+" value: "+String(pumpRuntime[index].memoryVar.value));
+		}
+		else if(matches[1]==wateringTime[0].classId){
+			wateringTime[index].memoryVar.setValue(event_data.toInt());
+			Serial.println("Watering Time "+String(index)+" value: "+String(wateringTime[index].memoryVar.value));
+		}
+		else{
+			Serial.println("Received unknown topic "+event_topic);
+		}
+		preferences.end();
 	}
-	else if(event_topic==moistureTresh.stateTopic){
-		Serial.println("Received moisture_tresh");
-		moistureTresh.value = event_data.toFloat();
-		Serial.println("moisture_tresh value: "+String(moistureTresh.value));
-		updateVar(moistureTresh.value, moistureTresh.key);
-	}
-	else if(event_topic==airValue.stateTopic){
-		Serial.println("Received air_value");
-		airValue.value = event_data.toFloat();
-		Serial.println("air_value value: "+String(airValue.value));
-		updateVar(airValue.value, airValue.key);
-	}
-	else if(event_topic==waterValue.stateTopic){
-		Serial.println("Received water_value");
-		waterValue.value = event_data.toFloat();
-		Serial.println("water_value value: "+String(waterValue.value));
-		updateVar(waterValue.value, waterValue.key);
-	}
-	else if(event_topic==samplingTime.stateTopic){
-		Serial.println("Received sampling_time");
-		samplingTime.value = event_data.toInt();
-		Serial.println("sampling_time value: "+String(samplingTime.value));
-		updateVar(samplingTime.value, samplingTime.key);
-	}
-	else if(event_topic==pumpRuntime.stateTopic){
-		Serial.println("Received pump_runtime");
-		pumpRuntime.value = event_data.toInt();
-		Serial.println("pump_runtime value: "+String(pumpRuntime.value));
-		updateVar(pumpRuntime.value, pumpRuntime.key);
-	}
-	else if(event_topic==wateringTime.stateTopic){
-	    Serial.println("Received watering_time");
-	    wateringTime.value = event_data.toInt();
-	    Serial.println("watering_time value: "+String(wateringTime.value));
-		updateVar(wateringTime.value, wateringTime.key);
-	}
-	else{
-		Serial.println("Received unknown topic "+event_topic);
-	}
-	preferences.end();
 }
 
 static esp_err_t mqtt_event_callback_handler(esp_mqtt_event_handle_t event) {
