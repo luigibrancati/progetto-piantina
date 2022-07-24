@@ -122,17 +122,19 @@ struct MemoryVarBool {
 };
 
 struct Logger: MQTTtopics {
-	bool serial;
-	bool mqttConnected;
-	esp_mqtt_client_handle_t client;
+	static bool serial;
+	static bool mqttConnected;
+	static String classId;
+	static esp_mqtt_client_handle_t client;
 	
 	Logger(bool serial):
-		MQTTtopics()
+		MQTTtopics(),
+		classId("logger")
 	{
 		this->serial = serial;
 		this->mqttConnected = false;
 		this->client = nullptr;
-		stateTopic = "abegghome/logger/state";
+		stateTopic = "abegghome/"+this->classId+"/state";
 	}
 
 	void log(String msg, bool newline = true){
@@ -150,24 +152,28 @@ struct Logger: MQTTtopics {
 } logger(false);
 
 struct AirValue: MQTTtopics {
+	static String classId;
 	MemoryVarFloat memoryVar;
 
 	AirValue():
 		MQTTtopics(),
-		memoryVar("AirValue")
+		memoryVar("airValue"),
+		classId("airValue")
 	{
-		stateTopic = "abegghome/air_value/state";
+		stateTopic = "abegghome/"+this->classId+"/state";
 	}
 } airValue;
 
 struct WaterValue: MQTTtopics {
+	static String classId;
 	MemoryVarFloat memoryVar;
 
 	WaterValue():
 		MQTTtopics(),
-		memoryVar("WaterValue")
+		memoryVar("waterValue"),
+		classId("waterValue")
 	{
-		stateTopic = "abegghome/water_value/state";
+		stateTopic = "abegghome/"+this->classId+"/state";
 	}
 } waterValue;
 

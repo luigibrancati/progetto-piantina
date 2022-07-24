@@ -5,60 +5,71 @@
 #include "memory.h"
 
 struct WateringTime: MQTTtopics {
+	static String classId;
 	MemoryVarInt memoryVar;
 
 	WateringTime(uint8_t i):
 		MQTTtopics(),
-		memoryVar("WateringTime"+String(i))
+		memoryVar("wateringTime"+String(i)),
+		classId("wateringTime")
 	{
-		stateTopic = "abegghome/watering_time/"+String(i)+"/state";
+		stateTopic = "abegghome/"+this->classId+"/"+String(i)+"/state";
 	}
 };
 
 struct MoistureTresh: MQTTtopics {
+	static String classId;
 	MemoryVarFloat memoryVar;
 
 	MoistureTresh(uint8_t i):
 		MQTTtopics(),
-		memoryVar("MoistureTresh"+String(i))
+		memoryVar("moistureTresh"+String(i)),
+		classId("moistureTresh")
 	{
-		stateTopic = "abegghome/moisture_tresh/"+String(i)+"/state";
+		stateTopic = "abegghome/"+this->classId+"/"+String(i)+"/state";
 	}
 };
 
 struct PumpOverride: MQTTtopics {
+	static String classId;
 	MemoryVarBool memoryVar;
+	static template_topic = "abegghome/"+this->classId+"/%i/"
 
 	PumpOverride(uint8_t i):
 		MQTTtopics(),
-		memoryVar("PumpOverride"+String(i))
+		memoryVar("pumpOverride"+String(i)),
+		classId("pumpOverride")
 	{
-		commandTopic = "abegghome/pump_override/"+String(i)+"/com";
-		stateTopic = "abegghome/pump_override/"+String(i)+"/state";
+		commandTopic = "abegghome/"+this->classId+"/"+String(i)+"/com";
+		stateTopic = "abegghome/"+this->classId+"/"+String(i)+"/state";
 	}
 };
 
 struct PumpSwitch: MQTTtopics {
+	static String classId;
 	MemoryVarBool memoryVar;
 
 	PumpSwitch(uint8_t i):
 		MQTTtopics(),
-		memoryVar("PumpSwitch"+String(i))
+		memoryVar("pumpSwitch"+String(i)),
+		classId("pumpSwitch")
 	{
-		commandTopic = "abegghome/pump_switch/"+String(i)+"/com";
-		stateTopic = "abegghome/pump_switch/"+String(i)+"/state";
+		commandTopic = "abegghome/"+this->classId+"/"+String(i)+"/com";
+		stateTopic = "abegghome/"+this->classId+"/"+String(i)+"/state";
 	}
 };
 
 struct PumpState: MQTTtopics {
+	static String classId;
 	MemoryVarInt lastRunMemoryVar;
 
 	PumpState(uint8_t i):
 		MQTTtopics(),
-		lastRunMemoryVar("lastRunMemoryVar"+String(i))
+		lastRunMemoryVar("lastRunMemoryVar"+String(i)),
+		classId("pumpState")
 	{
-		stateTopic = "abegghome/pump/"+String(i)+"/state";
-		availabilityTopic = "abegghome/pump/"+String(i)+"/availability";
+		stateTopic = "abegghome/"+this->classId+"/"+String(i)+"/state";
+		availabilityTopic = "abegghome/"+this->classId+"/"+String(i)+"/availability";
 	}
 
 	int getFromMemory() override {
@@ -67,13 +78,15 @@ struct PumpState: MQTTtopics {
 };
 
 struct PumpRuntime: MQTTtopics {
+	static String classId;
 	MemoryVarInt memoryVar;
 
 	PumpRuntime(uint8_t i):
 		MQTTtopics(),
-		memoryVar("PumpRuntime"+String(i))
+		memoryVar("pumpRuntime"+String(i)),
+		classId("pumpRuntime")
 	{
-		stateTopic = "abegghome/pump_runtime/"+String(i)+"/state";
+		stateTopic = "abegghome/"+this->classId+"/"+String(i)+"/state";
 	}
 };
 

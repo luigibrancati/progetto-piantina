@@ -5,27 +5,31 @@
 #include "memory.h"
 
 struct SamplingTime: MQTTtopics {
+	static String classId;
 	MemoryVarInt memoryVar;
 
 	SamplingTime():
 		MQTTtopics(),
-		memoryVar("SamplingTime")
+		memoryVar("samplingTime"),
+		classId("samplingTime")
 	{
-		stateTopic = "abegghome/sampling_time/state";
+		stateTopic = "abegghome/"+this->classId+"/state";
 	}
 } samplingTime;
 
 struct SoilMoisture: MQTTtopics {
+	static String classId;
 	MemoryVarFloat rawVoltage;
 	MemoryVarFloat percVoltage;
 
 	SoilMoisture(uint8_t i):
 		MQTTtopics(),
 		rawVoltage("SoilMoistureRaw"+String(i)),
-		percVoltage("SoilMoisturePerc"+String(i))
+		percVoltage("SoilMoisturePerc"+String(i)),
+		classId("soilMoisture")
 	{
-		stateTopic = "abegghome/moisture/"+String(i)+"/state";
-		debugTopic = "abegghome/moisture/"+String(i)+"/debug";
+		stateTopic = "abegghome/"+this->classId+"/"+String(i)+"/state";
+		debugTopic = "abegghome/"+this->classId+"/"+String(i)+"/debug";
 	}
 };
 

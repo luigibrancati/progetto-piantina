@@ -2,6 +2,7 @@
 #define _WIFI_SERVER_H_
 
 #include "memory.h"
+#include <string>
 #include <WiFi.h>
 #include "esp_log.h"
 #include "esp_system.h"
@@ -9,19 +10,20 @@
 #include "mqtt_client.h"
 #include "esp_tls.h"
 #include <ArduinoJson.h>
+#include <regex.h>
 
 struct MQTTtopics {
+	String commandTopic;
+	String stateTopic;
+	String availabilityTopic;
+	String debugTopic;
+
 	MQTTtopics():
 		commandTopic("debug"),
 		stateTopic("debug"),
 		availabilityTopic("debug"),
 		debugTopic("debug")
 	{}
-
-	String commandTopic;
-	String stateTopic;
-	String availabilityTopic;
-	String debugTopic;
 };
 
 static constexpr char SSID[] = "ssid";    // Network SSID (name)
@@ -56,8 +58,8 @@ String convert_to_string(char* text, int len){
 }
 
 static esp_err_t messageHandler(esp_mqtt_event_handle_t event){
-	String event_topic = convert_to_string(event->topic, event->topic_len);
-	String event_data = convert_to_string(event->data, event->data_len);
+	std::string event_topic = convert_to_string(event->topic, event->topic_len);
+	std::string event_data = convert_to_string(event->data, event->data_len);
 	preferences.begin(variablesNamespace, false);
 	if(event_topic==pumpOverride.commandTopic){
 		Serial.println("Received command for Pump Override");
@@ -138,19 +140,20 @@ static esp_err_t mqtt_event_callback_handler(esp_mqtt_event_handle_t event) {
 			Serial.println("Fetching variables from the broker.");
 			mqttConnected = true;
 			logger.mqttConnected = mqttConnected;
-			// Send an on state to mean the pump/board has started and is connected
-			esp_mqtt_client_publish(client, pump.availabilityTopic.c_str(), "on", 2, 1, 0);
-			esp_mqtt_client_publish(client, soilMoisture.availabilityTopic.c_str(), "on", 2, 1, 0);
-			esp_mqtt_client_publish(client, pump.stateTopic.c_str(), "off", 3, 1, 1);
-			// Subscriptions
-			esp_mqtt_client_subscribe(client, pumpOverride.commandTopic.c_str(), 1);
-			esp_mqtt_client_subscribe(client, pumpSwitch.commandTopic.c_str(), 1);
-			esp_mqtt_client_subscribe(client, moistureTresh.stateTopic.c_str(), 1);
+			for(uint8_t i=0;i<numPlants;i++){
+				// Send an on state to mean the pump/board has started and is connected
+				esp_mqtt_client_publish(client, pumpState[i].availabilityTopic.c_str(), "on", 2, 1, 0);
+				esp_mqtt_client_publish(client, pumpState[i].stateTopic.c_str(), "off", 3, 1, 1);
+				// Subscriptions
+				esp_mqtt_client_subscribe(client, wateringTime[i].stateTopic.c_str(), 1);
+				esp_mqtt_client_subscribe(client, moistureTresh[i].stateTopic.c_str(), 1);
+				esp_mqtt_client_subscribe(client, pumpOverride[i].commandTopic.c_str(), 1);
+				esp_mqtt_client_subscribe(client, pumpSwitch[i].commandTopic.c_str(), 1);
+				esp_mqtt_client_subscribe(client, pumpRuntime[i].stateTopic.c_str(), 1);
+			}
 			esp_mqtt_client_subscribe(client, airValue.stateTopic.c_str(), 1);
 			esp_mqtt_client_subscribe(client, waterValue.stateTopic.c_str(), 1);
 			esp_mqtt_client_subscribe(client, samplingTime.stateTopic.c_str(), 1);
-			esp_mqtt_client_subscribe(client, pumpRuntime.stateTopic.c_str(), 1);
-			esp_mqtt_client_subscribe(client, wateringTime.stateTopic.c_str(), 1);
 			Serial.println("Subscribed to all topics");
 			break;
 		case MQTT_EVENT_DISCONNECTED:
