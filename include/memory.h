@@ -4,17 +4,18 @@
 #include <Preferences.h>
 #include <mqtt_client.h>
 
+#define sToMs 1000
+#define sToUs 1000000
+#define DefaultMS_minute 60*sToMs
+#define DefaultMS_hour 60*DefaultMS_minute
+
 Preferences preferences;
-static constexpr short numPlants = 6;
-static constexpr int sToUs = 1000000;
-static constexpr int connectionTimeoutSeconds = 10;
+static const short numPlants = 6;
+static const int connectionTimeoutSeconds = 10;
 RTC_DATA_ATTR int boot = 0;
-static constexpr short NumReadings = 10; // Read moisture 10 times
-static constexpr int ReadingsInt = 1000; // Read every 30 seconds
-static constexpr int sToMs = 1000; // Conversion from Seconds to mS
-static constexpr long DefaultMS_minute = 60 * sToMs; //Milliseconds per minute
-static constexpr long DefaultMS_hour = (long)DefaultMS_minute*60; //Milliseconds per hour
-static constexpr String variablesNamespace = "variables";
+static const short NumReadings = 10; // Read moisture 10 times
+static const int ReadingsInt = 1000;
+static const char* variablesNamespace = "variables";
 
 struct MemoryVarInt {
 	String memoryKey;
@@ -26,7 +27,7 @@ struct MemoryVarInt {
 	{}
 
 	int getFromMemory(){
-		return preferences.getInt(this->memoryKey.c_str(), NAN);
+		return preferences.getInt(this->memoryKey.c_str(), 0);
 	}
 
 	void updateFromMemory(){
@@ -61,7 +62,7 @@ struct MemoryVarFloat {
 	{}
 
 	float getFromMemory(){
-		return preferences.getFloat(this->memoryKey.c_str(), NAN);
+		return preferences.getFloat(this->memoryKey.c_str(), 0);
 	}
 
 	void updateFromMemory(){
@@ -96,7 +97,7 @@ struct MemoryVarBool {
 	{}
 
 	bool getFromMemory(){
-		return preferences.getBool(this->memoryKey.c_str(), NAN);
+		return preferences.getBool(this->memoryKey.c_str(), 0);
 	}
 
 	void updateFromMemory(){
@@ -121,19 +122,29 @@ struct MemoryVarBool {
 	}
 };
 
+struct MQTTtopics {
+	String commandTopic;
+	String stateTopic;
+	String availabilityTopic;
+	String debugTopic;
+
+	MQTTtopics():
+		commandTopic("debug"),
+		stateTopic("debug"),
+		availabilityTopic("debug"),
+		debugTopic("debug")
+	{}
+};
+
 struct Logger: MQTTtopics {
 	static bool serial;
 	static bool mqttConnected;
 	static String classId;
 	static esp_mqtt_client_handle_t client;
 	
-	Logger(bool serial):
-		MQTTtopics(),
-		classId("logger")
+	Logger():
+		MQTTtopics()
 	{
-		this->serial = serial;
-		this->mqttConnected = false;
-		this->client = nullptr;
 		stateTopic = "abegghome/"+this->classId+"/state";
 	}
 
@@ -149,7 +160,11 @@ struct Logger: MQTTtopics {
 			}
 		}
 	}
-} logger(false);
+} logger;
+String Logger::classId = "logger";
+bool Logger::serial = false;
+bool Logger::mqttConnected = false;
+esp_mqtt_client_handle_t Logger::client = nullptr;
 
 struct AirValue: MQTTtopics {
 	static String classId;
@@ -157,12 +172,12 @@ struct AirValue: MQTTtopics {
 
 	AirValue():
 		MQTTtopics(),
-		memoryVar("airValue"),
-		classId("airValue")
+		memoryVar("airValue")
 	{
 		stateTopic = "abegghome/"+this->classId+"/state";
 	}
 } airValue;
+String AirValue::classId = "airValue";
 
 struct WaterValue: MQTTtopics {
 	static String classId;
@@ -170,16 +185,16 @@ struct WaterValue: MQTTtopics {
 
 	WaterValue():
 		MQTTtopics(),
-		memoryVar("waterValue"),
-		classId("waterValue")
+		memoryVar("waterValue")
 	{
 		stateTopic = "abegghome/"+this->classId+"/state";
 	}
 } waterValue;
+String WaterValue::classId = "waterValue";
 
 void getGeneralVarsFromMemory(){
 	Serial.println("Getting all general variables from memory");
-	preferences.begin(variablesNamespace.c_str(), false);
+	preferences.begin(variablesNamespace, false);
 	airValue.memoryVar.updateFromMemory();
 	waterValue.memoryVar.updateFromMemory();
 	preferences.end();

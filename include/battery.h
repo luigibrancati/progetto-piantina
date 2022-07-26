@@ -3,7 +3,8 @@
 
 #include <esp_adc_cal.h>
 
-static constexpr float CRITICALLY_LOW_BATTERY_VOLTAGE = 3.30;
+static const float CRITICALLY_LOW_BATTERY_VOLTAGE = 3.30;
+static const gpio_num_t BAT_DIV = GPIO_NUM_25;
 
 // Taken from https://github.com/Torxgewinde/Firebeetle-2-ESP32-E/blob/main/Firebeetle_DeepSleep.ino
 float read_battery() {

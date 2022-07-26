@@ -7,6 +7,6 @@
   The new board includes a RGB status led, I set different colors based on program status
 */
 
-static constexpr gpio_num_t statusLedPin = GPIO_NUM_13;
+static const gpio_num_t statusLedPin = GPIO_NUM_13;
 
 #endif

@@ -1,7 +1,10 @@
-#ifndef _WIFI_SERVER_H_
-#define _WIFI_SERVER_H_
+#ifndef _WIFI_MQTT_H_
+#define _WIFI_MQTT_H_
 
 #include "memory.h"
+#include "pumps.h"
+#include "sensors.h"
+#include "global.h"
 #include <string>
 #include <WiFi.h>
 #include "esp_log.h"
@@ -10,63 +13,21 @@
 #include "mqtt_client.h"
 #include "esp_tls.h"
 #include <ArduinoJson.h>
-#include <regex.h>
-
-struct MQTTtopics {
-	String commandTopic;
-	String stateTopic;
-	String availabilityTopic;
-	String debugTopic;
-
-	MQTTtopics():
-		commandTopic("debug"),
-		stateTopic("debug"),
-		availabilityTopic("debug"),
-		debugTopic("debug")
-	{}
-};
-
-static constexpr char SSID[] = "ssid";    // Network SSID (name)
-static constexpr char PASS[] = "pass";    // Network password (use for WPA, or use as key for WEP)
-static constexpr char MQTTBrokerIP[] = "192.168.1.84";
-static constexpr char MQTTUser[] = "luigi";
-static constexpr char MQTTPass[] = "pass";
-static constexpr short MQTTBrokerPort = 8883;
-static constexpr unsigned char DSTroot_CA[] PROGMEM = R"EOF(
-COPY HERE THE CONTENT OF CA.CRT
-)EOF";
-
-StaticJsonDocument<250> sensorJson;
-char buffer[250];
-esp_mqtt_client_config_t mqtt_cfg = {};
-esp_mqtt_client_handle_t client = nullptr;
-static bool mqttConnected = false;
-
-template<typename T>
-void createJson(T value) {
-	sensorJson.clear();
-	sensorJson["value"] = value;
-	serializeJson(sensorJson, buffer);
-}
-
-std::string convert_to_string(char* text, int len){
-	std::string out = "";
-	for(char* l=text; l!=(text+len);l++){
-		out+=*l;
-	}
-	return out;
-}
+#include <Regexp.h>
 
 static esp_err_t messageHandler(esp_mqtt_event_handle_t event){
-	std::string event_topic = convert_to_string(event->topic, event->topic_len);
-	std::string event_data = convert_to_string(event->data, event->data_len);
-	std::regex topic_regex("[\\w/]*/(\\w+)/(\\d{1,1})/[\\w/]*", std::regex::ECMAScript | std::regex::icase);
-	std::smatch matches;
-	if (std::regex_search(event_topic, matches, topic_regex)) {
+	String event_topic = convert_to_string(event->topic, event->topic_len);
+	String event_data = convert_to_string(event->data, event->data_len);
+	MatchState ms;
+	ms.Target(event->topic);
+	char result = ms.Match("[%a/]*/(%a+)/(%d+)/[%a/]*");
+	if (result == REGEXP_MATCHED) {
 		Serial.println("Received command/value from "+event_topic);
+		char buf[100];
+		String match_string = ms.GetCapture(buf, 0);
+		uint8_t index = atoi(ms.GetCapture(buf, 1));
 		preferences.begin(variablesNamespace, false);
-		uint8_t index = matches[2];
-		if(matches[1]==pumpOverride[0].classId){
+		if(match_string == PumpOverride::classId){
 			if (event_data == "on") {
 				Serial.println("Turning Pump Override "+String(index)+" on");
 				pumpOverride[index].memoryVar.setValue(true);
@@ -79,7 +40,7 @@ static esp_err_t messageHandler(esp_mqtt_event_handle_t event){
 			}
 			Serial.println("Pump Override "+String(index)+" value: "+String(pumpOverride[index].memoryVar.value));
 		}
-		else if(matches[1]==pumpSwitch[0].classId){
+		else if(match_string == PumpSwitch::classId){
 			if (event_data == "on") {
 				Serial.println("Turning Pump Switch "+String(index)+" on");
 				pumpSwitch[index].memoryVar.setValue(true);
@@ -92,27 +53,27 @@ static esp_err_t messageHandler(esp_mqtt_event_handle_t event){
 			}
 			Serial.println("Pump Switch "+String(index)+" value: "+String(pumpSwitch[index].memoryVar.value));
 		}
-		else if(matches[1]==moistureTresh[0].classId){
+		else if(match_string == MoistureTresh::classId){
 			moistureTresh[index].memoryVar.setValue(event_data.toFloat());
 			Serial.println("Moisture Tresh "+String(index)+" value: "+String(moistureTresh[index].memoryVar.value));
 		}
-		else if(matches[1]==airValue.classId){
+		else if(match_string == AirValue::classId){
 			airValue.memoryVar.setValue(event_data.toFloat());
 			Serial.println("Air Value value: "+String(airValue.memoryVar.value));
 		}
-		else if(matches[1]==waterValue.classId){
+		else if(match_string == WaterValue::classId){
 			waterValue.memoryVar.setValue(event_data.toFloat());
 			Serial.println("Water Value value: "+String(waterValue.memoryVar.value));
 		}
-		else if(matches[1]==samplingTime.classId){
+		else if(match_string == SamplingTime::classId){
 			samplingTime.memoryVar.setValue(event_data.toInt());
 			Serial.println("Sampling Time value: "+String(samplingTime.memoryVar.value));
 		}
-		else if(matches[1]==pumpRuntime[0].classId){
+		else if(match_string == PumpRuntime::classId){
 			pumpRuntime[index].memoryVar.setValue(event_data.toInt());
 			Serial.println("Pump Runtime "+String(index)+" value: "+String(pumpRuntime[index].memoryVar.value));
 		}
-		else if(matches[1]==wateringTime[0].classId){
+		else if(match_string == WateringTime::classId){
 			wateringTime[index].memoryVar.setValue(event_data.toInt());
 			Serial.println("Watering Time "+String(index)+" value: "+String(wateringTime[index].memoryVar.value));
 		}
@@ -187,11 +148,12 @@ void client_setup(){
 void wifi_mqtt_connect(){
 	client_setup();
 	WiFi.begin(SSID, PASS);
-	Serial.println("Connecting", false);
+	Serial.println("Connecting");
 	while(!WiFi.isConnected() && millis() < (connectionTimeoutSeconds * sToMs)) {
-		Serial.println(".", false);
+		Serial.print(".");
 		delay(100);
 	}
+	Serial.println();
 	esp_err_t err = esp_tls_set_global_ca_store(DSTroot_CA, sizeof(DSTroot_CA));
 	client = esp_mqtt_client_init(&mqtt_cfg);
 	logger.client = client;
@@ -204,13 +166,17 @@ void wifi_mqtt_connect(){
 			esp_mqtt_client_stop(client);
 			logger.mqttConnected = mqttConnected;
 			Serial.println("Couldn't connect to the MQTT broker.");
-			getAllFromMemory();
+			getSensorVarsFromMemory();
+			getPumpVarsFromMemory();
+			getGeneralVarsFromMemory();
 		}
 	} else {
 		mqttConnected = false;
 		logger.mqttConnected = mqttConnected;
 		Serial.println("Couldn't connect to the wifi.");
-		getAllFromMemory();
+		getSensorVarsFromMemory();
+		getPumpVarsFromMemory();
+		getGeneralVarsFromMemory();
 	}
 }
 
@@ -219,11 +185,12 @@ void wifi_mqtt_disconnect(){
 	esp_mqtt_client_destroy(client);
 	WiFi.disconnect();
 	logger.mqttConnected = false;
-	Serial.println("Disconnecting", false);
+	Serial.println("Disconnecting");
 	while(WiFi.isConnected()){
-		Serial.println(".", false);
+		Serial.print(".");
 		delay(100);
 	}
+	Serial.println();
 }
 
 #endif
