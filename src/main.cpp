@@ -19,6 +19,13 @@ void setup() {
 	digitalWrite(LED_BUILTIN, HIGH);
 	pinMode(sensorsSwitch, OUTPUT);
 	digitalWrite(sensorsSwitch, LOW);
+	// Read battery voltage
+	/*
+		We didn't notice, but we connected the battery voltage to GPIO25 which is ADC2.
+		ADC2 cannot be used when WIFI is connected, so I have to read battery before connecting to WIFI.
+	*/ 
+	float batteryVoltage = read_battery();
+	Serial.println("Battery voltage: "+String(batteryVoltage));
 	// Connect to Wifi and MQTT broker
 	wifi_mqtt_connect();
 	// Read all sensors at once
@@ -57,9 +64,6 @@ void setup() {
 	}
 	preferences.end();
 	delay(1000);
-	// Read battery voltage
-	float batteryVoltage = read_battery();
-	Serial.println("Battery voltage: "+String(batteryVoltage));
 	if(mqttConnected){
 		// Send an off state to mean the pump/board is going to sleep and disconnect
 		for(uint8_t i=0;i<numPlants;i++){
