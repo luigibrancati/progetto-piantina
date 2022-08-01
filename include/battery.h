@@ -8,18 +8,19 @@ static const gpio_num_t BAT_DIV = GPIO_NUM_25;
 
 // Taken from https://github.com/Torxgewinde/Firebeetle-2-ESP32-E/blob/main/Firebeetle_DeepSleep.ino
 float read_battery() {
-  uint32_t value = 0;
-  int rounds = 11;
+  int raw_value = 0;
+  int value = 0;
+  uint8_t rounds = 10;
   esp_adc_cal_characteristics_t adc_chars;
 
-  //battery voltage divided by 2 can be measured at GPIO34, which equals ADC1_CHANNEL6
-  adc1_config_width(ADC_WIDTH_BIT_12);
-  adc1_config_channel_atten(ADC1_CHANNEL_6, ADC_ATTEN_DB_11);
+  //battery voltage divided by 2 can be measured at GPIO25, which equals ADC2_CHANNEL8
+  adc2_config_channel_atten(ADC2_CHANNEL_8, ADC_ATTEN_DB_11);
   esp_adc_cal_characterize(ADC_UNIT_1, ADC_ATTEN_DB_11, ADC_WIDTH_BIT_12, 1100, &adc_chars);
 
   //to avoid noise, sample the pin several times and average the result
-  for(int i=1; i<=rounds; i++) {
-    value += adc1_get_raw(ADC1_CHANNEL_6);
+  for(int i=0; i<rounds; i++) {
+    adc2_get_raw(ADC2_CHANNEL_8, ADC_WIDTH_BIT_12, &raw_value);
+    value += raw_value;
   }
   value /= (uint32_t)rounds;
 
