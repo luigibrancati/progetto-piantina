@@ -1,4 +1,5 @@
-#include "wifi_mqtt.h"
+#include "wifi_functions.h"
+#include "mqtt_functions.h"
 #include "battery.h"
 #include "memory.h"
 #include "pumps.h"
@@ -27,7 +28,14 @@ void setup() {
 	float batteryVoltage = read_battery();
 	Serial.println("Battery voltage: "+String(batteryVoltage));
 	// Connect to Wifi and MQTT broker
-	wifi_mqtt_connect();
+	wifi_connect();
+	mqtt_connect();
+	if(!WiFi.isConnected() | !mqttConnected){
+		// Stop the client, otherwise it'll attempt to connect again
+		getSensorVarsFromMemory();
+		getPumpVarsFromMemory();
+		getGeneralVarsFromMemory();
+	}
 	// Read all sensors at once
 	read_all_sensors();
 	// Start memory
@@ -89,7 +97,12 @@ void setup() {
 		Serial.println("Hibernating without timer due to low battery charge.");
 	}
 	// Disconnect
-	wifi_mqtt_disconnect();
+	if(mqttConnected){
+		mqtt_destroy();
+	}
+	if(WiFi.isConnected()){
+		wifi_disconnect();
+	}
 	// Hibernate
 	esp_deep_sleep_start();
 }
