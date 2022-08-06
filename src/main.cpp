@@ -28,7 +28,7 @@ void setup() {
 	float batteryVoltage = read_battery();
 	Serial.println("Battery voltage: "+String(batteryVoltage));
 	// Connect to Wifi and MQTT broker
-	wifi_connect();
+	wifi_wps_connect();
 	mqtt_connect();
 	if(!WiFi.isConnected() | !mqttConnected){
 		// Stop the client, otherwise it'll attempt to connect again
