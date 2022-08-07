@@ -25,6 +25,8 @@ char buffer[250];
 esp_mqtt_client_config_t mqtt_cfg = {};
 esp_mqtt_client_handle_t client = nullptr;
 static bool mqttConnected = false;
+static const short numPlants = 6;
+RTC_DATA_ATTR int boot = 0;
 
 template<typename T>
 void createJson(T value) {

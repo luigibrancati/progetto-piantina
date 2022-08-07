@@ -28,7 +28,7 @@ void setup() {
 	float batteryVoltage = read_battery();
 	Serial.println("Battery voltage: "+String(batteryVoltage));
 	// Connect to Wifi and MQTT broker
-	wifi_wps_connect();
+	wifiWpsConnect();
 	mqtt_connect();
 	if(!WiFi.isConnected() | !mqttConnected){
 		// Stop the client, otherwise it'll attempt to connect again
@@ -101,7 +101,7 @@ void setup() {
 		mqtt_destroy();
 	}
 	if(WiFi.isConnected()){
-		wifi_disconnect();
+		wifiDisconnect();
 	}
 	// Hibernate
 	esp_deep_sleep_start();

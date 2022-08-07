@@ -81,6 +81,7 @@ static esp_err_t messageHandler(esp_mqtt_event_handle_t event){
 		}
 		preferences.end();
 	}
+	return ESP_OK;
 }
 
 static esp_err_t mqtt_event_callback_handler(esp_mqtt_event_handle_t event) {

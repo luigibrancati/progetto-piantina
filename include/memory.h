@@ -10,11 +10,6 @@
 #define DefaultMS_hour 60*DefaultMS_minute
 
 Preferences preferences;
-static const short numPlants = 6;
-static const int connectionTimeoutSeconds = 10;
-RTC_DATA_ATTR int boot = 0;
-static const short NumReadings = 10; // Read moisture 10 times
-static const int ReadingsInt = 1000;
 static const char* variablesNamespace = "variables";
 
 struct MemoryVarInt {
