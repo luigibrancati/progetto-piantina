@@ -1,4 +1,5 @@
-#include "wifi_mqtt.h"
+#include "wifi_functions.h"
+#include "mqtt_functions.h"
 #include "battery.h"
 #include "memory.h"
 #include "pumps.h"
@@ -24,12 +25,19 @@ void setup() {
 		We didn't notice, but we connected the battery voltage to GPIO25 which is ADC2.
 		ADC2 cannot be used when WIFI is connected, so I have to read battery before connecting to WIFI.
 	*/ 
-	float batteryVoltage = read_battery();
+	float batteryVoltage = readBattery();
 	Serial.println("Battery voltage: "+String(batteryVoltage));
 	// Connect to Wifi and MQTT broker
-	wifi_mqtt_connect();
+	wifiWpsConnect();
+	mqttConnect();
+	if(!WiFi.isConnected() | !mqttConnected){
+		// Stop the client, otherwise it'll attempt to connect again
+		getSensorVarsFromMemory();
+		getPumpVarsFromMemory();
+		getGeneralVarsFromMemory();
+	}
 	// Read all sensors at once
-	read_all_sensors();
+	readAllSensors();
 	// Start memory
 	preferences.begin(variablesNamespace, false);
 	// Get the last time the pump was run
@@ -89,7 +97,12 @@ void setup() {
 		Serial.println("Hibernating without timer due to low battery charge.");
 	}
 	// Disconnect
-	wifi_mqtt_disconnect();
+	if(mqttConnected){
+		mqttDestroy();
+	}
+	if(WiFi.isConnected()){
+		wifiDisconnect();
+	}
 	// Hibernate
 	esp_deep_sleep_start();
 }

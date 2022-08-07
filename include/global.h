@@ -25,6 +25,8 @@ char buffer[250];
 esp_mqtt_client_config_t mqtt_cfg = {};
 esp_mqtt_client_handle_t client = nullptr;
 static bool mqttConnected = false;
+static const short numPlants = 6;
+RTC_DATA_ATTR int boot = 0;
 
 template<typename T>
 void createJson(T value) {
@@ -33,7 +35,7 @@ void createJson(T value) {
 	serializeJson(sensorJson, buffer);
 }
 
-String convert_to_string(char* text, int len){
+String convertToString(char* text, int len){
 	String out = "";
 	for(char* l=text; l!=(text+len);l++){
 		out+=*l;

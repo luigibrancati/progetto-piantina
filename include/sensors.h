@@ -4,6 +4,9 @@
 #include "memory.h"
 #include "global.h"
 
+static const short NumReadings = 10; // Read moisture 10 times
+static const int ReadingsInt = 1000;
+
 struct SamplingTime: MQTTtopics {
 	static String classId;
 	MemoryVarInt memoryVar;
@@ -56,7 +59,7 @@ void getSensorVarsFromMemory(){
 }
 
 //Function to map a value on a range
-float map_range(float x, float in_min, float in_max, float out_min, float out_max) {
+float mapRange(float x, float in_min, float in_max, float out_min, float out_max) {
 	return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
 }
 
@@ -64,7 +67,7 @@ float map_range(float x, float in_min, float in_max, float out_min, float out_ma
 //It performs NumberReadings number of readings of the soil moisture, at times ReadingsInt
 //The final moisture sample value is the average of all the readings
 //The sampled values are converted into percentages based on AirValue and WaterValue
-float read_soil_moisture(uint8_t i){
+float readSoilMoisture(uint8_t i){
 	// Convert the analog read into voltage
 	// ESP32 returns a value from 0 (0V) to 4095 (3.3V)
 	float reading = ((float) analogRead(sensorPins[i])/4095.0)*3.3;
@@ -72,27 +75,27 @@ float read_soil_moisture(uint8_t i){
 	return reading;
 }
 
-float soil_moisture_percent(float soilMoistureAverage){
-	float soilMoisturePercent = map_range(soilMoistureAverage, airValue.memoryVar.value, waterValue.memoryVar.value, 0.0, 100.0);
+float soilMoisturePercent(float soilMoistureAverage){
+	float soilMoisturePercent = mapRange(soilMoistureAverage, airValue.memoryVar.value, waterValue.memoryVar.value, 0.0, 100.0);
 	return constrain(soilMoisturePercent, 0.0, 100.0); //Returns the percentage of moisture
 }
 
-void read_soil_moisture_percent_average(uint8_t i){
+void readSoilMoisturePercentAverage(uint8_t i){
 	float soilMoistureAverage = 0;
 	// Read the moisture NumberReadings times, separated by ReadingsIntervalMS milliseconds
 	for(int j=0;j<NumReadings;j++){
-		soilMoistureAverage += ((float)read_soil_moisture(i)/NumReadings); //Average of all the readings
+		soilMoistureAverage += ((float)readSoilMoisture(i)/NumReadings); //Average of all the readings
 		delay(ReadingsInt); //Pause between two readings
 	}
 	soilMoisture[i].rawVoltage.setValue(soilMoistureAverage);
-	soilMoisture[i].percVoltage.setValue(soil_moisture_percent(soilMoistureAverage));
+	soilMoisture[i].percVoltage.setValue(soilMoisturePercent(soilMoistureAverage));
 }
 
-void read_all_sensors(){
+void readAllSensors(){
 	Serial.println("Reading soil moisture");
 	digitalWrite(sensorsSwitch, HIGH);
 	for(uint8_t i = 0; i<numPlants; i++){
-		read_soil_moisture_percent_average(i);
+		readSoilMoisturePercentAverage(i);
 		// publish readings to mqtt broker
 		createJson<float>(soilMoisture[i].percVoltage.value);
 		esp_mqtt_client_publish(client, soilMoisture[i].stateTopic.c_str(), buffer, 0, 1, 1);

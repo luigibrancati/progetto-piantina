@@ -7,7 +7,7 @@ static const float CRITICALLY_LOW_BATTERY_VOLTAGE = 3.30;
 static const adc2_channel_t BAT_DIV = ADC2_CHANNEL_8; // GPIO 25 corresponds to ADC2 channel 8
 
 // Taken from https://github.com/Torxgewinde/Firebeetle-2-ESP32-E/blob/main/Firebeetle_DeepSleep.ino
-float read_battery() {
+float readBattery() {
   int raw_value = 0;
   int value = 0;
   uint8_t rounds = 10;
