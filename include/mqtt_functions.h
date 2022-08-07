@@ -15,8 +15,8 @@
 #include <Regexp.h>
 
 static esp_err_t messageHandler(esp_mqtt_event_handle_t event){
-	String event_topic = convert_to_string(event->topic, event->topic_len);
-	String event_data = convert_to_string(event->data, event->data_len);
+	String event_topic = convertToString(event->topic, event->topic_len);
+	String event_data = convertToString(event->data, event->data_len);
 	MatchState ms;
 	ms.Target(event->topic);
 	char result = ms.Match("[%a/]*/(%a+)/(%d+)/[%a/]*");
@@ -84,7 +84,7 @@ static esp_err_t messageHandler(esp_mqtt_event_handle_t event){
 	return ESP_OK;
 }
 
-static esp_err_t mqtt_event_callback_handler(esp_mqtt_event_handle_t event) {
+static esp_err_t mqttEventCallbackHandler(esp_mqtt_event_handle_t event) {
 	switch(event->event_id){
 		case MQTT_EVENT_CONNECTED:
 			Serial.println("MQTT connection established");
@@ -131,28 +131,28 @@ static esp_err_t mqtt_event_callback_handler(esp_mqtt_event_handle_t event) {
 	return ESP_OK;
 }
 
-void client_setup(){
+void clientSetup(){
 	mqtt_cfg.host = MQTTBrokerIP;
 	mqtt_cfg.port = MQTTBrokerPort;
 	mqtt_cfg.username = MQTTUser;
 	mqtt_cfg.password = MQTTPass;
 	mqtt_cfg.keepalive = 15;
 	mqtt_cfg.transport = MQTT_TRANSPORT_OVER_SSL;
-	mqtt_cfg.event_handle = mqtt_event_callback_handler;
+	mqtt_cfg.event_handle = mqttEventCallbackHandler;
 	mqtt_cfg.lwt_topic = "debug";
 	mqtt_cfg.lwt_msg = "0";
 	mqtt_cfg.lwt_msg_len = 1;
 }
 
-void mqtt_destroy(){
+void mqttDestroy(){
 	Serial.println("Disconnecting MQTT");
 	esp_mqtt_client_destroy(client);
 	mqttConnected = false;
 	logger.mqttConnected = mqttConnected;
 }
 
-void mqtt_connect(){
-	client_setup();
+void mqttConnect(){
+	clientSetup();
 	esp_err_t err = esp_tls_set_global_ca_store(DSTroot_CA, sizeof(DSTroot_CA));
 	client = esp_mqtt_client_init(&mqtt_cfg);
 	logger.client = client;
@@ -167,7 +167,7 @@ void mqtt_connect(){
 			Serial.println("Couldn't connect to the MQTT broker.");
 		}
 	} else {
-		mqtt_destroy();
+		mqttDestroy();
 		Serial.println("Couldn't connect to the MQTT broker because Wifi is off.");
 	}
 }

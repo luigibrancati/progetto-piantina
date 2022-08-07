@@ -35,7 +35,7 @@ void createJson(T value) {
 	serializeJson(sensorJson, buffer);
 }
 
-String convert_to_string(char* text, int len){
+String convertToString(char* text, int len){
 	String out = "";
 	for(char* l=text; l!=(text+len);l++){
 		out+=*l;
