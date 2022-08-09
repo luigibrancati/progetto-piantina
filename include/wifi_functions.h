@@ -106,13 +106,6 @@ void wifiWpsConnect(){
 	waitConnection();
 }
 
-// void wifiConnect(){
-// 	wifiInit();
-// 	LogInfo("Connecting to Wifi");
-// 	WiFi.begin(SSID, PASS);
-// 	waitConnection();
-// }
-
 void wifiDisconnect(){
 	LogInfo("Disconnecting from Wifi");
 	WiFi.disconnect();
