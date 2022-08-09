@@ -205,11 +205,11 @@ void setup() {
 	time_t diffTime[numPlants] {0};
 	for(uint8_t i=0;i<numPlants;i++){
 		diffTime[i] = difftime(time(NULL), pumpState[i].lastRunMemoryVar.value);
-		Serial.println("Seconds since last run: "+String(diffTime[i]));
-		Serial.println("diffTime >= wateringTime: "+String(diffTime[i] >= (wateringTime[i].memoryVar.value * 3600)));
-		Serial.println("soilMoisture < moistureTresh: "+String(soilMoisture[i].percVoltage.value < moistureTresh[i].memoryVar.value));
+		LogInfo("Seconds since last run: %i", diffTime[i]);
+		LogInfo("diffTime >= wateringTime: %i", diffTime[i] >= (wateringTime[i].memoryVar.value * 3600));
+		LogInfo("soilMoisture < moistureTresh: %i", soilMoisture[i].percVoltage.value < moistureTresh[i].memoryVar.value);
 		if(pumpOverride[i].memoryVar.value || (pumpSwitch[i].memoryVar.value && (diffTime[i] >= (wateringTime[i].memoryVar.value * 3600)) && (soilMoisture[i].percVoltage.value < moistureTresh[i].memoryVar.value))){
-			Serial.println("Running pump for "+String(pumpRuntime[i].memoryVar.value)+" seconds");
+			LogInfo("Running pump for %i seconds", pumpRuntime[i].memoryVar.value);
 			digitalWrite(pumpPins[i], HIGH);
 			if(mqttConnected){
 				esp_mqtt_client_publish(mqtt_client, pumpState[i].stateTopic.c_str(), "on", 2, 1, 0);
@@ -224,7 +224,7 @@ void setup() {
 			pumpState[i].lastRunMemoryVar.setValue(time(NULL));
 		}
 		else{
-			Serial.println("Condition to water plant not met, pump is off");
+			LogInfo("Condition to water plant not met, pump is off");
 			if(mqttConnected){
 				esp_mqtt_client_publish(mqtt_client, pumpState[i].stateTopic.c_str(), "off", 3, 1, 0);
 			}
