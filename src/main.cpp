@@ -26,7 +26,7 @@ void setup() {
 		ADC2 cannot be used when WIFI is connected, so I have to read battery before connecting to WIFI.
 	*/ 
 	float batteryVoltage = readBattery();
-	Serial.println("Battery voltage: "+String(batteryVoltage));
+	LogInfo("Battery voltage: %f", batteryVoltage);
 	// Connect to Wifi and MQTT broker
 	wifiWpsConnect();
 	mqttConnect();

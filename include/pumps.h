@@ -3,6 +3,7 @@
 
 #include "memory.h"
 #include "global.h"
+#include "logging.h"
 
 struct WateringTime: MQTTtopics {
 	static String classId;
@@ -95,7 +96,7 @@ static PumpState pumpState[numPlants] {PumpState(0), PumpState(1), PumpState(2),
 static PumpRuntime pumpRuntime[numPlants] {PumpRuntime(0), PumpRuntime(1), PumpRuntime(2), PumpRuntime(3), PumpRuntime(4), PumpRuntime(5)};
 
 void getPumpVarsFromMemory(){
-	Serial.println("Getting all pump variables from memory");
+	LogInfo("Getting all pump variables from memory");
 	preferences.begin(variablesNamespace, false);
 	for(uint8_t i = 0; i<numPlants; i++){
 		wateringTime[i].memoryVar.updateFromMemory();

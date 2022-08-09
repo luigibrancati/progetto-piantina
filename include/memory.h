@@ -3,6 +3,7 @@
 
 #include <Preferences.h>
 #include <mqtt_client.h>
+#include "logging.h"
 
 #define sToMs 1000
 #define sToUs 1000000
@@ -26,18 +27,18 @@ struct MemoryVarInt {
 	}
 
 	void updateFromMemory(){
-		Serial.println("Getting "+memoryKey+" variable from memory");
+		LogInfo("Getting %s variable from memory", memoryKey);
 		this->value = this->getFromMemory();
-		Serial.println(memoryKey+" value: "+String(this->value));
+		LogInfo("%s value: %i", memoryKey, this->value);
 	}
 
 	void saveToMemory(){
-		Serial.println("Saving "+memoryKey+" variable to memory");
+		LogInfo("Saving %s variable to memory", memoryKey);
 		if(this->value != this->getFromMemory()) {
 			preferences.putInt(this->memoryKey.c_str(), this->value);
-			Serial.println("Saved "+memoryKey+" value: "+String(this->value));
+			LogInfo("Saved %s value: %i", memoryKey, this->value);
 		} else {
-			Serial.println(memoryKey+" hasn't changed");
+			LogInfo("%s hasn't changed", memoryKey);
 		}
 	}
 
@@ -61,18 +62,18 @@ struct MemoryVarFloat {
 	}
 
 	void updateFromMemory(){
-		Serial.println("Getting "+memoryKey+" variable from memory");
+		LogInfo("Getting %s variable from memory", memoryKey);
 		this->value = this->getFromMemory();
-		Serial.println(memoryKey+" value: "+String(this->value));
+		LogInfo("%s value: %f", memoryKey, this->value);
 	}
 
 	void saveToMemory(){
-		Serial.println("Saving "+memoryKey+" variable to memory");
+		LogInfo("Saving %s variable to memory", memoryKey);
 		if(this->value != this->getFromMemory()) {
 			preferences.putFloat(this->memoryKey.c_str(), this->value);
-			Serial.println("Saved "+memoryKey+" value: "+String(this->value));
+			LogInfo("Saved %s value: %f", memoryKey, this->value);
 		} else {
-			Serial.println(memoryKey+" hasn't changed");
+			LogInfo("%s hasn't changed", memoryKey);
 		}
 	}
 
@@ -96,18 +97,18 @@ struct MemoryVarBool {
 	}
 
 	void updateFromMemory(){
-		Serial.println("Getting "+memoryKey+" variable from memory");
+		LogInfo("Getting %s variable from memory", memoryKey);
 		this->value = this->getFromMemory();
-		Serial.println(memoryKey+" value: "+String(this->value));
+		LogInfo("%s value: %i", memoryKey, this->value);
 	}
 
 	void saveToMemory(){
-		Serial.println("Saving "+memoryKey+" variable to memory");
+		LogInfo("Saving %s variable to memory", memoryKey);
 		if(this->value != this->getFromMemory()) {
 			preferences.putBool(this->memoryKey.c_str(), this->value);
-			Serial.println("Saved "+memoryKey+" value: "+String(this->value));
+			LogInfo("Saved %s value: %i", memoryKey, this->value);
 		} else {
-			Serial.println(memoryKey+" hasn't changed");
+			LogInfo("%s hasn't changed", memoryKey);
 		}
 	}
 
@@ -131,13 +132,12 @@ struct MQTTtopics {
 	{}
 };
 
-struct Logger: MQTTtopics {
+struct MQTTLogger: MQTTtopics {
 	static bool serial;
-	static bool mqttConnected;
 	static String classId;
 	static esp_mqtt_client_handle_t client;
 	
-	Logger():
+	MQTTLogger():
 		MQTTtopics()
 	{
 		stateTopic = "abegghome/"+this->classId+"/state";
@@ -148,18 +148,17 @@ struct Logger: MQTTtopics {
 			(newline?Serial.println(msg):Serial.print(msg));
 		}
 		else{
-			if(this->mqttConnected){
+			if(mqttConnected){
 				esp_mqtt_client_publish(this->client, this->stateTopic.c_str(), msg.c_str(), 0, 1, 1);
 			} else {
 				(newline?Serial.println(msg):Serial.print(msg));
 			}
 		}
 	}
-} logger;
-String Logger::classId = "logger";
-bool Logger::serial = false;
-bool Logger::mqttConnected = false;
-esp_mqtt_client_handle_t Logger::client = nullptr;
+} mqtt_logger;
+String MQTTLogger::classId = "logger";
+bool MQTTLogger::serial = false;
+esp_mqtt_client_handle_t MQTTLogger::client = nullptr;
 
 struct AirValue: MQTTtopics {
 	static String classId;
@@ -188,7 +187,7 @@ struct WaterValue: MQTTtopics {
 String WaterValue::classId = "waterValue";
 
 void getGeneralVarsFromMemory(){
-	Serial.println("Getting all general variables from memory");
+	LogInfo("Getting all general variables from memory");
 	preferences.begin(variablesNamespace, false);
 	airValue.memoryVar.updateFromMemory();
 	waterValue.memoryVar.updateFromMemory();

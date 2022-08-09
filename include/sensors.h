@@ -3,6 +3,7 @@
 
 #include "memory.h"
 #include "global.h"
+#include "logging.h"
 
 static const short NumReadings = 10; // Read moisture 10 times
 static const int ReadingsInt = 1000;
@@ -48,7 +49,7 @@ static const gpio_num_t sensorsSwitch = GPIO_NUM_2;
 static SoilMoisture soilMoisture[numPlants] {SoilMoisture(0), SoilMoisture(1), SoilMoisture(2), SoilMoisture(3), SoilMoisture(4), SoilMoisture(5)};
 
 void getSensorVarsFromMemory(){
-	Serial.println("Getting all sensor variables from memory");
+	LogInfo("Getting all sensor variables from memory");
 	preferences.begin(variablesNamespace, false);
 	samplingTime.memoryVar.updateFromMemory();
 	for(uint8_t i=0; i<numPlants; i++){
@@ -71,7 +72,7 @@ float readSoilMoisture(uint8_t i){
 	// Convert the analog read into voltage
 	// ESP32 returns a value from 0 (0V) to 4095 (3.3V)
 	float reading = ((float) analogRead(sensorPins[i])/4095.0)*3.3;
-	Serial.println("Analog read (S"+String(i)+"): "+String(reading));
+	LogInfo("Analog read (S%i): %f", i, reading);
 	return reading;
 }
 
@@ -92,7 +93,7 @@ void readSoilMoisturePercentAverage(uint8_t i){
 }
 
 void readAllSensors(){
-	Serial.println("Reading soil moisture");
+	LogInfo("Reading soil moisture");
 	digitalWrite(sensorsSwitch, HIGH);
 	for(uint8_t i = 0; i<numPlants; i++){
 		readSoilMoisturePercentAverage(i);

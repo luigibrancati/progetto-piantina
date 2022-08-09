@@ -6,6 +6,7 @@
 #include "esp_log.h"
 #include "WiFi.h"
 #include "esp_wps.h"
+#include "logging.h"
 
 /*
 Change the definition of the WPS mode
@@ -29,9 +30,9 @@ void waitConnection(){
 	}
 	Serial.println();
 	if(WiFi.isConnected()){
-		Serial.println("Connected: "+WiFi.localIP().toString());
+		LogInfo("Connected: %s", WiFi.localIP().toString());
 	} else {
-		Serial.println("Couldn't connect to the wifi.");
+		LogInfo("Couldn't connect to the wifi.");
 	}
 }
 
@@ -45,47 +46,46 @@ void wpsInitConfig(){
 
 void wpsStart(){
     if(esp_wifi_wps_enable(&config)){
-    	Serial.println("WPS Enable Failed");
+    	LogInfo("WPS Enable Failed");
     } else if(esp_wifi_wps_start(0)){
-    	Serial.println("WPS Start Failed");
+    	LogInfo("WPS Start Failed");
     }
 }
 
 void wpsStop(){
     if(esp_wifi_wps_disable()){
-    	Serial.println("WPS Disable Failed");
+    	LogInfo("WPS Disable Failed");
     }
 }
 
 void WiFiEvent(WiFiEvent_t event, arduino_event_info_t info){
 	switch(event){
 		case ARDUINO_EVENT_WIFI_STA_START:
-			Serial.println("Station Mode Started");
+			LogInfo("Station Mode Started");
 			break;
 		case ARDUINO_EVENT_WIFI_STA_GOT_IP:
-			Serial.println("Connected to :" + String(WiFi.SSID()));
-			Serial.print("Got IP: ");
-			Serial.println(WiFi.localIP());
+			LogInfo("Connected to: %s", WiFi.SSID());
+			LogInfo("Got IP: %s", WiFi.localIP().toString());
 			digitalWrite(LED_BUILTIN, HIGH);
 			break;
 		case ARDUINO_EVENT_WIFI_STA_DISCONNECTED:
-			Serial.println("Disconnected from station, attempting reconnection");
+			LogInfo("Disconnected from station, attempting reconnection");
 			digitalWrite(LED_BUILTIN, LOW);
 			WiFi.reconnect();
 			break;
 		case ARDUINO_EVENT_WPS_ER_SUCCESS:
-			Serial.println("WPS Successfull, stopping WPS and connecting to: " + String(WiFi.SSID()));
+			LogInfo("WPS Successfull, stopping WPS and connecting to: %s", WiFi.SSID());
 			wpsStop();
 			delay(10);
 			WiFi.begin();
 			break;
 		case ARDUINO_EVENT_WPS_ER_FAILED:
-			Serial.println("WPS Failed, retrying");
+			LogInfo("WPS Failed, retrying");
 			wpsStop();
 			wpsStart();
 			break;
 		case ARDUINO_EVENT_WPS_ER_TIMEOUT:
-			Serial.println("WPS Timedout, retrying");
+			LogInfo("WPS Timedout, retrying");
 			wpsStop();
 			wpsStart();
 			break;
@@ -102,20 +102,20 @@ void wifiInit(){
 
 void wifiWpsConnect(){
 	wifiInit();
-	Serial.println("Starting WPS");
+	LogInfo("Starting WPS");
 	wpsStart();
 	waitConnection();
 }
 
 // void wifiConnect(){
 // 	wifiInit();
-// 	Serial.println("Connecting to Wifi");
+// 	LogInfo("Connecting to Wifi");
 // 	WiFi.begin(SSID, PASS);
 // 	waitConnection();
 // }
 
 void wifiDisconnect(){
-	Serial.println("Disconnecting from Wifi");
+	LogInfo("Disconnecting from Wifi");
 	WiFi.disconnect();
 	while(WiFi.isConnected()){
 		Serial.print(".");
