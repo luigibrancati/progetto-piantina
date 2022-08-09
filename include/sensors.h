@@ -1,9 +1,10 @@
 #ifndef _READ_SENSORS_H_
 #define _READ_SENSORS_H_
 
-#include "memory.h"
 #include "global.h"
 #include "logging.h"
+#include "memory.h"
+#include "mqtt_functions.h"
 
 static const short NumReadings = 10; // Read moisture 10 times
 static const int ReadingsInt = 1000;
@@ -99,7 +100,7 @@ void readAllSensors(){
 		readSoilMoisturePercentAverage(i);
 		// publish readings to mqtt broker
 		createJson<float>(soilMoisture[i].percVoltage.value);
-		esp_mqtt_client_publish(client, soilMoisture[i].stateTopic.c_str(), buffer, 0, 1, 1);
+		esp_mqtt_client_publish(mqtt_client, soilMoisture[i].stateTopic.c_str(), buffer, 0, 1, 1);
 	}
 	digitalWrite(sensorsSwitch, LOW);
 }

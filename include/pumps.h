@@ -1,9 +1,9 @@
 #ifndef _READ_PUMPS_H_
 #define _READ_PUMPS_H_
 
-#include "memory.h"
 #include "global.h"
 #include "logging.h"
+#include "memory.h"
 
 struct WateringTime: MQTTtopics {
 	static String classId;

@@ -1,10 +1,10 @@
 #ifndef _READ_MEMORY_H_
 #define _READ_MEMORY_H_
 
+#include "global.h"
+#include "logging.h"
 #include <Preferences.h>
 #include <mqtt_client.h>
-#include "logging.h"
-#include "global.h"
 
 #define sToMs 1000
 #define sToUs 1000000

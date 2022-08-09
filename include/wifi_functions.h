@@ -1,12 +1,11 @@
 #ifndef _WIFI_FUNCTIONS_H_
 #define _WIFI_FUNCTIONS_H_
 
-#include "memory.h"
 #include "global.h"
-#include "esp_log.h"
-#include "WiFi.h"
-#include "esp_wps.h"
 #include "logging.h"
+#include "memory.h"
+#include <WiFi.h>
+#include <esp_wps.h>
 
 /*
 Change the definition of the WPS mode

@@ -5,12 +5,168 @@
 #include "pumps.h"
 #include "sensors.h"
 #include <time.h>
+#include "global.h"
+
+// For hmac SHA256 encryption
+#include <mbedtls/base64.h>
+#include <mbedtls/md.h>
+#include <mbedtls/sha256.h>
+
+#include <azure_ca.h>
+#include "logging.h"
+#include "Azure_IoT_PnP_Template.h"
+
+/* --- Sample-specific Settings --- */
+#define SERIAL_LOGGER_BAUD_RATE 115200
+
+/* --- Time and NTP Settings --- */
+#define NTP_SERVERS "pool.ntp.org", "time.nist.gov"
+#define PST_TIME_ZONE -8
+#define PST_TIME_ZONE_DAYLIGHT_SAVINGS_DIFF   1
+#define GMT_OFFSET_SECS (PST_TIME_ZONE * 3600)
+#define GMT_OFFSET_SECS_DST ((PST_TIME_ZONE + PST_TIME_ZONE_DAYLIGHT_SAVINGS_DIFF) * 3600)
+
+/* --- Function Declarations --- */
+static void sync_device_clock_with_ntp_server();
+
+/* --- Other Interface functions required by Azure IoT --- */
+/*
+ * See the documentation of `hmac_sha256_encryption_function_t` in AzureIoT.h for details.
+ */
+static int mbedtls_hmac_sha256(const uint8_t* key, size_t key_length, const uint8_t* payload, size_t payload_length, uint8_t* signed_payload, size_t signed_payload_size)
+{
+	(void)signed_payload_size;
+	mbedtls_md_context_t ctx;
+	mbedtls_md_type_t md_type = MBEDTLS_MD_SHA256;
+	mbedtls_md_init(&ctx);
+	mbedtls_md_setup(&ctx, mbedtls_md_info_from_type(md_type), 1);
+	mbedtls_md_hmac_starts(&ctx, (const unsigned char*)key, key_length);
+	mbedtls_md_hmac_update(&ctx, (const unsigned char*)payload, payload_length);
+	mbedtls_md_hmac_finish(&ctx, (byte*)signed_payload);
+	mbedtls_md_free(&ctx);
+	return 0;
+}
+
+/*
+ * See the documentation of `base64_decode_function_t` in AzureIoT.h for details.
+ */
+static int base64_decode(uint8_t* data, size_t data_length, uint8_t* decoded, size_t decoded_size, size_t* decoded_length)
+{
+  	return mbedtls_base64_decode(decoded, decoded_size, decoded_length, data, data_length);
+}
+
+/*
+ * See the documentation of `base64_encode_function_t` in AzureIoT.h for details.
+ */
+static int base64_encode(uint8_t* data, size_t data_length, uint8_t* encoded, size_t encoded_size, size_t* encoded_length)
+{
+  	return mbedtls_base64_encode(encoded, encoded_size, encoded_length, data, data_length);
+}
+
+/*
+ * See the documentation of `properties_update_completed_t` in AzureIoT.h for details.
+ */
+static void on_properties_update_completed(uint32_t request_id, az_iot_status status_code)
+{
+  	LogInfo("Properties update request completed (id=%d, status=%d)", request_id, status_code);
+}
+
+/*
+ * See the documentation of `properties_received_t` in AzureIoT.h for details.
+ */
+void on_properties_received(az_span properties)
+{
+  	LogInfo("Properties update received: %.*s", az_span_size(properties), az_span_ptr(properties));
+	// It is recommended not to perform work within callbacks.
+	// The properties are being handled here to simplify the sample.
+	if (azure_pnp_handle_properties_update(&azure_iot, properties, properties_request_id++) != 0)
+	{
+		LogError("Failed handling properties update.");
+	}
+}
+
+/*
+ * See the documentation of `command_request_received_t` in AzureIoT.h for details.
+ */
+static void on_command_request_received(command_request_t command)
+{  
+	az_span component_name = az_span_size(command.component_name) == 0 ? AZ_SPAN_FROM_STR("") : command.component_name;
+	LogInfo(
+		"Command request received (id=%.*s, component=%.*s, name=%.*s)", 
+		az_span_size(command.request_id), az_span_ptr(command.request_id),
+		az_span_size(component_name), az_span_ptr(component_name),
+		az_span_size(command.command_name), az_span_ptr(command.command_name)
+	);
+	// Here the request is being processed within the callback that delivers the command request.
+	// However, for production application the recommendation is to save `command` and process it outside
+	// this callback, usually inside the main thread/task/loop.
+	(void)azure_pnp_handle_command_request(&azure_iot, command);
+}
+
+void azure_iot_setup(){
+	/* 	
+	* The configuration structure used by Azure IoT must remain unchanged (including data buffer) 
+	* throughout the lifetime of the sample. This variable must also not lose context so other
+	* components do not overwrite any information within this structure.
+	*/
+	azure_iot_config.user_agent = AZ_SPAN_FROM_STR(AZURE_SDK_CLIENT_USER_AGENT);
+	azure_iot_config.model_id = azure_pnp_get_model_id();
+	azure_iot_config.use_device_provisioning = true; // Required for Azure IoT Central.
+	azure_iot_config.iot_hub_fqdn = AZ_SPAN_EMPTY;
+	azure_iot_config.device_id = AZ_SPAN_EMPTY;
+	azure_iot_config.device_certificate = AZ_SPAN_EMPTY;
+	azure_iot_config.device_certificate_private_key = AZ_SPAN_EMPTY;
+	azure_iot_config.device_key = AZ_SPAN_FROM_STR(IOT_CONFIG_DEVICE_KEY);
+	azure_iot_config.dps_id_scope = AZ_SPAN_FROM_STR(DPS_ID_SCOPE);
+	azure_iot_config.dps_registration_id = AZ_SPAN_FROM_STR(IOT_CONFIG_DEVICE_ID); // Use Device ID for Azure IoT Central.
+	azure_iot_config.data_buffer = AZ_SPAN_FROM_BUFFER(az_iot_data_buffer);
+	azure_iot_config.sas_token_lifetime_in_minutes = MQTT_PASSWORD_LIFETIME_IN_MINUTES;
+	azure_iot_config.mqtt_client_interface.mqtt_client_init = mqtt_client_init_function;
+	azure_iot_config.mqtt_client_interface.mqtt_client_deinit = mqtt_client_deinit_function;
+	azure_iot_config.mqtt_client_interface.mqtt_client_subscribe = mqtt_client_subscribe_function;
+	azure_iot_config.mqtt_client_interface.mqtt_client_publish = mqtt_client_publish_function;
+	azure_iot_config.data_manipulation_functions.hmac_sha256_encrypt = mbedtls_hmac_sha256;
+	azure_iot_config.data_manipulation_functions.base64_decode = base64_decode;
+	azure_iot_config.data_manipulation_functions.base64_encode = base64_encode;
+	azure_iot_config.on_properties_update_completed = on_properties_update_completed;
+	azure_iot_config.on_properties_received = on_properties_received;
+	azure_iot_config.on_command_request_received = on_command_request_received;
+
+	azure_iot_init(&azure_iot, &azure_iot_config);
+	azure_iot_start(&azure_iot);
+	LogInfo("Azure IoT client initialized (state=%d)", azure_iot.state);
+	switch(azure_iot_get_status(&azure_iot))
+    {
+		case azure_iot_connected:
+			mqttConnected = true;
+			if (send_device_info)
+			{
+				(void)azure_pnp_send_device_info(&azure_iot, properties_request_id++);
+				send_device_info = false; // Only need to send once.
+			}
+			else if (azure_pnp_send_telemetry(&azure_iot) != 0)
+			{
+				LogError("Failed sending telemetry.");          
+			}
+			break;
+		case azure_iot_error:
+			LogError("Azure IoT client is in error state." );
+			mqttConnected = false;
+			azure_iot_stop(&azure_iot);
+			wifiDisconnect();
+			break;
+		default:
+			break;
+    }
+    azure_iot_do_work(&azure_iot);
+}
 
 void setup() {
 	delay(500);
 	setCpuFrequencyMhz(80);
-	Serial.begin(115200);
+	Serial.begin(SERIAL_LOGGER_BAUD_RATE);
 	while(!Serial);
+  	set_logging_function(logging_function);
 	for(uint8_t i=0;i<numPlants;i++){
 		pinMode(pumpPins[i], OUTPUT);
 		digitalWrite(pumpPins[i], LOW);
@@ -29,7 +185,11 @@ void setup() {
 	LogInfo("Battery voltage: %f", batteryVoltage);
 	// Connect to Wifi and MQTT broker
 	wifiWpsConnect();
-	mqttConnect();
+	//Sync time
+	sync_device_clock_with_ntp_server();
+	// Connect Azure IoT
+	azure_pnp_init();
+	azure_iot_setup();
 	if(!WiFi.isConnected() | !mqttConnected){
 		// Stop the client, otherwise it'll attempt to connect again
 		getSensorVarsFromMemory();
@@ -52,10 +212,10 @@ void setup() {
 			Serial.println("Running pump for "+String(pumpRuntime[i].memoryVar.value)+" seconds");
 			digitalWrite(pumpPins[i], HIGH);
 			if(mqttConnected){
-				esp_mqtt_client_publish(client, pumpState[i].stateTopic.c_str(), "on", 2, 1, 0);
+				esp_mqtt_client_publish(mqtt_client, pumpState[i].stateTopic.c_str(), "on", 2, 1, 0);
 				delay(pumpRuntime[i].memoryVar.value * sToMs);
 				digitalWrite(pumpPins[i], LOW);
-				esp_mqtt_client_publish(client, pumpState[i].stateTopic.c_str(), "off", 3, 1, 0);
+				esp_mqtt_client_publish(mqtt_client, pumpState[i].stateTopic.c_str(), "off", 3, 1, 0);
 			} else {
 				delay(pumpRuntime[i].memoryVar.value * sToMs);
 				digitalWrite(pumpPins[i], LOW);
@@ -66,7 +226,7 @@ void setup() {
 		else{
 			Serial.println("Condition to water plant not met, pump is off");
 			if(mqttConnected){
-				esp_mqtt_client_publish(client, pumpState[i].stateTopic.c_str(), "off", 3, 1, 0);
+				esp_mqtt_client_publish(mqtt_client, pumpState[i].stateTopic.c_str(), "off", 3, 1, 0);
 			}
 		}
 	}
@@ -75,11 +235,11 @@ void setup() {
 	if(mqttConnected){
 		// Send an off state to mean the pump/board is going to sleep and disconnect
 		for(uint8_t i=0;i<numPlants;i++){
-			esp_mqtt_client_publish(client, pumpState[i].availabilityTopic.c_str(), "off", 3, 1, 0);
+			esp_mqtt_client_publish(mqtt_client, pumpState[i].availabilityTopic.c_str(), "off", 3, 1, 0);
 		}
 		//Send battery voltage
 		createJson<float>(batteryVoltage);
-		esp_mqtt_client_publish(client, "battery/state", buffer, 0, 1, 1);
+		esp_mqtt_client_publish(mqtt_client, "battery/state", buffer, 0, 1, 1);
 	}
 	// Deep sleep
 	// The following lines disable all RTC features except the timer
@@ -97,8 +257,8 @@ void setup() {
 		Serial.println("Hibernating without timer due to low battery charge.");
 	}
 	// Disconnect
-	if(mqttConnected){
-		mqttDestroy();
+	if(azure_iot_get_status(&azure_iot) == azure_iot_connected){
+		azure_iot_stop(&azure_iot);
 	}
 	if(WiFi.isConnected()){
 		wifiDisconnect();
@@ -108,3 +268,27 @@ void setup() {
 }
 
 void loop() {}
+
+/* === Function Implementations === */
+
+/*
+ * These are support functions used by the sample itself to perform its basic tasks
+ * of connecting to the internet, syncing the board clock, ESP MQTT client event handler 
+ * and logging.
+ */
+
+/* --- System and Platform Functions --- */
+static void sync_device_clock_with_ntp_server()
+{
+	LogInfo("Setting time using SNTP");
+	configTime(GMT_OFFSET_SECS, GMT_OFFSET_SECS_DST, NTP_SERVERS);
+	time_t now = time(NULL);
+	while (now < UNIX_TIME_NOV_13_2017)
+	{
+		delay(500);
+		Serial.print(".");
+		now = time(NULL);
+	}
+	Serial.println("");
+	LogInfo("Time initialized!");
+}
