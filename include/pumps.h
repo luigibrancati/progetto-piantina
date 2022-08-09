@@ -11,12 +11,12 @@ struct WateringTime: MQTTtopics {
 
 	WateringTime(uint8_t i):
 		MQTTtopics(),
-		memoryVar("wateringTime"+String(i))
+		memoryVar("wateringtime"+String(i))
 	{
 		stateTopic = "abegghome/"+this->classId+"/"+String(i)+"/state";
 	}
 };
-String WateringTime::classId = "wateringTime";
+String WateringTime::classId = "wateringtime";
 
 struct MoistureTresh: MQTTtopics {
 	static String classId;
@@ -24,12 +24,12 @@ struct MoistureTresh: MQTTtopics {
 
 	MoistureTresh(uint8_t i):
 		MQTTtopics(),
-		memoryVar("moistureTresh"+String(i))
+		memoryVar("moisturetresh"+String(i))
 	{
 		stateTopic = "abegghome/"+this->classId+"/"+String(i)+"/state";
 	}
 };
-String MoistureTresh::classId = "moistureTresh";
+String MoistureTresh::classId = "moisturetresh";
 
 
 struct PumpOverride: MQTTtopics {
@@ -38,13 +38,13 @@ struct PumpOverride: MQTTtopics {
 
 	PumpOverride(uint8_t i):
 		MQTTtopics(),
-		memoryVar("pumpOverride"+String(i))
+		memoryVar("pumpoverride"+String(i))
 	{
 		commandTopic = "abegghome/"+this->classId+"/"+String(i)+"/com";
 		stateTopic = "abegghome/"+this->classId+"/"+String(i)+"/state";
 	}
 };
-String PumpOverride::classId = "pumpOverride";
+String PumpOverride::classId = "pumpoverride";
 
 struct PumpSwitch: MQTTtopics {
 	static String classId;
@@ -52,13 +52,13 @@ struct PumpSwitch: MQTTtopics {
 
 	PumpSwitch(uint8_t i):
 		MQTTtopics(),
-		memoryVar("pumpSwitch"+String(i))
+		memoryVar("pumpswitch"+String(i))
 	{
 		commandTopic = "abegghome/"+this->classId+"/"+String(i)+"/com";
 		stateTopic = "abegghome/"+this->classId+"/"+String(i)+"/state";
 	}
 };
-String PumpSwitch::classId = "pumpSwitch";
+String PumpSwitch::classId = "pumpswitch";
 
 struct PumpState: MQTTtopics {
 	static String classId;
@@ -66,13 +66,13 @@ struct PumpState: MQTTtopics {
 
 	PumpState(uint8_t i):
 		MQTTtopics(),
-		lastRunMemoryVar("lastRunMemoryVar"+String(i))
+		lastRunMemoryVar("lastrunmemoryvar"+String(i))
 	{
 		stateTopic = "abegghome/"+this->classId+"/"+String(i)+"/state";
 		availabilityTopic = "abegghome/"+this->classId+"/"+String(i)+"/availability";
 	}
 };
-String PumpState::classId = "pumpState";
+String PumpState::classId = "pumpstate";
 
 struct PumpRuntime: MQTTtopics {
 	static String classId;
@@ -80,12 +80,12 @@ struct PumpRuntime: MQTTtopics {
 
 	PumpRuntime(uint8_t i):
 		MQTTtopics(),
-		memoryVar("pumpRuntime"+String(i))
+		memoryVar("pumpruntime"+String(i))
 	{
 		stateTopic = "abegghome/"+this->classId+"/"+String(i)+"/state";
 	}
 };
-String PumpRuntime::classId = "pumpRuntime";
+String PumpRuntime::classId = "pumpruntime";
 
 static const gpio_num_t pumpPins[numPlants] {GPIO_NUM_23, GPIO_NUM_19, GPIO_NUM_18, GPIO_NUM_17, GPIO_NUM_16, GPIO_NUM_4};
 static WateringTime wateringTime[numPlants] {WateringTime(0), WateringTime(1), WateringTime(2), WateringTime(3), WateringTime(4), WateringTime(5)};

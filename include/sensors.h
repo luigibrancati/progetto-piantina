@@ -15,12 +15,12 @@ struct SamplingTime: MQTTtopics {
 
 	SamplingTime():
 		MQTTtopics(),
-		memoryVar("samplingTime")
+		memoryVar("samplingtime")
 	{
 		stateTopic = "abegghome/"+this->classId+"/state";
 	}
 } samplingTime;
-String SamplingTime::classId = "samplingTime";
+String SamplingTime::classId = "samplingtime";
 
 struct SoilMoisture: MQTTtopics {
 	static String classId;
@@ -29,14 +29,14 @@ struct SoilMoisture: MQTTtopics {
 
 	SoilMoisture(uint8_t i):
 		MQTTtopics(),
-		rawVoltage("SoilMoistureRaw"+String(i)),
-		percVoltage("SoilMoisturePerc"+String(i))
+		rawVoltage("soilmoistureraw"+String(i)),
+		percVoltage("soilmoistureperc"+String(i))
 	{
 		stateTopic = "abegghome/"+this->classId+"/"+String(i)+"/state";
 		debugTopic = "abegghome/"+this->classId+"/"+String(i)+"/debug";
 	}
 };
-String SoilMoisture::classId = "soilMoisture";
+String SoilMoisture::classId = "soilmoisture";
 
 static const gpio_num_t sensorPins[numPlants] {GPIO_NUM_36, GPIO_NUM_39, GPIO_NUM_34, GPIO_NUM_35, GPIO_NUM_32, GPIO_NUM_33};
 /*
