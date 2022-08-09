@@ -4,6 +4,7 @@
 #include <Preferences.h>
 #include <mqtt_client.h>
 #include "logging.h"
+#include "global.h"
 
 #define sToMs 1000
 #define sToUs 1000000

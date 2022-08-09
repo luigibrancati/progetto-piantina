@@ -10,16 +10,27 @@
 #include <ArduinoJson.h>
 #include <regex>
 
-static const char SSID[] = "ssid";    // Network SSID (name)
-static const char PASS[] = "pass";    // Network password (use for WPA, or use as key for WEP)
-static const char MQTTBrokerIP[] = "192.168.1.84";
-static const char MQTTUser[] = "luigi";
-static const char MQTTPass[] = "pass";
-static const short MQTTBrokerPort = 8883;
+
+#define DPS_ID_SCOPE "0ne006EFCD7"
+#define IOT_CONFIG_DEVICE_ID "1t0g4iy75p3"
+#define IOT_CONFIG_DEVICE_KEY "Mdnv+ekK2Z82JMY1LA5iSHAvrguhtyu241eG9oW4hfU="
+#define MQTTBrokerIP "192.168.1.84"
+#define MQTTUser "luigi"
+#define MQTTPass "pass"
+#define MQTTBrokerPort 8883
+// User-agent (url-encoded) provided by the MQTT client to Azure IoT Services.
+// When developing for your own Arduino-based platform,
+// please update the suffix with the format '(ard;<platform>)' as an url-encoded string.
+#define AZURE_SDK_CLIENT_USER_AGENT "c%2F" AZ_SDK_VERSION_STRING "(ard%3Besp32)"
+// Publish 1 message every 2 seconds.
+#define TELEMETRY_FREQUENCY_IN_SECONDS 20
+// For how long the MQTT password (SAS token) is valid, in minutes.
+// After that, the sample automatically generates a new password and re-connects.
+#define MQTT_PASSWORD_LIFETIME_IN_MINUTES 60
+
 static const unsigned char DSTroot_CA[] PROGMEM = R"EOF(
 COPY HERE THE CONTENT OF CA.CRT
 )EOF";
-
 StaticJsonDocument<250> sensorJson;
 char buffer[250];
 esp_mqtt_client_config_t mqtt_cfg = {};

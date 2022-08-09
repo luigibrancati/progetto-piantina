@@ -91,7 +91,6 @@ static esp_err_t mqttEventCallbackHandler(esp_mqtt_event_handle_t event) {
 			LogInfo("MQTT connection established");
 			LogInfo("Fetching variables from the broker.");
 			mqttConnected = true;
-			mqtt_logger.mqttConnected = mqttConnected;
 			for(uint8_t i=0;i<numPlants;i++){
 				// Send an on state to mean the pump/board has started and is connected
 				esp_mqtt_client_publish(client, pumpState[i].availabilityTopic.c_str(), "on", 2, 1, 0);
@@ -111,7 +110,6 @@ static esp_err_t mqttEventCallbackHandler(esp_mqtt_event_handle_t event) {
 		case MQTT_EVENT_DISCONNECTED:
 			LogInfo("TEST", "MQTT event: %d. MQTT_EVENT_DISCONNECTED", event->event_id);
 			mqttConnected = false;
-			mqtt_logger.mqttConnected = mqttConnected;
 			break;
 		case MQTT_EVENT_SUBSCRIBED:
 			LogInfo("TEST", "MQTT msgid= %d event: %d. MQTT_EVENT_SUBSCRIBED", event->msg_id, event->event_id);
@@ -149,7 +147,6 @@ void mqttDestroy(){
 	LogInfo("Disconnecting MQTT");
 	esp_mqtt_client_destroy(client);
 	mqttConnected = false;
-	mqtt_logger.mqttConnected = mqttConnected;
 }
 
 void mqttConnect(){
@@ -164,7 +161,6 @@ void mqttConnect(){
 		if(!mqttConnected){
 			// Stop the client, otherwise it'll attempt to connect again
 			esp_mqtt_client_stop(client);
-			mqtt_logger.mqttConnected = mqttConnected;
 			LogInfo("Couldn't connect to the MQTT broker.");
 		}
 	} else {
