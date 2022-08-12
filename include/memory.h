@@ -28,18 +28,18 @@ struct MemoryVarInt {
 	}
 
 	void updateFromMemory(){
-		LogInfo("Getting %s variable from memory", memoryKey);
+		LogInfo("Getting %s variable from memory", memoryKey.c_str());
 		this->value = this->getFromMemory();
-		LogInfo("%s value: %i", memoryKey, this->value);
+		LogInfo("%s value: %i", memoryKey.c_str(), this->value);
 	}
 
 	void saveToMemory(){
-		LogInfo("Saving %s variable to memory", memoryKey);
+		LogInfo("Saving %s variable to memory", memoryKey.c_str());
 		if(this->value != this->getFromMemory()) {
 			preferences.putInt(this->memoryKey.c_str(), this->value);
-			LogInfo("Saved %s value: %i", memoryKey, this->value);
+			LogInfo("Saved %s value: %i", memoryKey.c_str(), this->value);
 		} else {
-			LogInfo("%s hasn't changed", memoryKey);
+			LogInfo("%s hasn't changed", memoryKey.c_str());
 		}
 	}
 
@@ -63,22 +63,23 @@ struct MemoryVarFloat {
 	}
 
 	void updateFromMemory(){
-		LogInfo("Getting %s variable from memory", memoryKey);
+		LogInfo("Getting %s variable from memory", memoryKey.c_str());
 		this->value = this->getFromMemory();
-		LogInfo("%s value: %f", memoryKey, this->value);
+		LogInfo("%s value: %f", memoryKey.c_str(), this->value);
 	}
 
 	void saveToMemory(){
-		LogInfo("Saving %s variable to memory", memoryKey);
+		LogInfo("Saving %s variable to memory", memoryKey.c_str());
 		if(this->value != this->getFromMemory()) {
 			preferences.putFloat(this->memoryKey.c_str(), this->value);
-			LogInfo("Saved %s value: %f", memoryKey, this->value);
+			LogInfo("Saved %s value: %f", memoryKey.c_str(), this->value);
 		} else {
-			LogInfo("%s hasn't changed", memoryKey);
+			LogInfo("%s hasn't changed", memoryKey.c_str());
 		}
 	}
 
 	void setValue(float val){
+		LogInfo("Setting %s value to %f", this->memoryKey.c_str(), val);
 		this->value = val;
 		this->saveToMemory();
 	}
@@ -98,18 +99,18 @@ struct MemoryVarBool {
 	}
 
 	void updateFromMemory(){
-		LogInfo("Getting %s variable from memory", memoryKey);
+		LogInfo("Getting %s variable from memory", memoryKey.c_str());
 		this->value = this->getFromMemory();
-		LogInfo("%s value: %i", memoryKey, this->value);
+		LogInfo("%s value: %i", memoryKey.c_str(), this->value);
 	}
 
 	void saveToMemory(){
-		LogInfo("Saving %s variable to memory", memoryKey);
+		LogInfo("Saving %s variable to memory", memoryKey.c_str());
 		if(this->value != this->getFromMemory()) {
 			preferences.putBool(this->memoryKey.c_str(), this->value);
-			LogInfo("Saved %s value: %i", memoryKey, this->value);
+			LogInfo("Saved %s value: %i", memoryKey.c_str(), this->value);
 		} else {
-			LogInfo("%s hasn't changed", memoryKey);
+			LogInfo("%s hasn't changed", memoryKey.c_str());
 		}
 	}
 
