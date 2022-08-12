@@ -63,7 +63,7 @@ void WiFiEvent(WiFiEvent_t event, arduino_event_info_t info){
 			LogInfo("Station Mode Started");
 			break;
 		case ARDUINO_EVENT_WIFI_STA_GOT_IP:
-			LogInfo("Connected to: %s", WiFi.SSID());
+			LogInfo("Connected to: %s", WiFi.SSID().c_str());
 			LogInfo("Got IP: %s", WiFi.localIP().toString());
 			digitalWrite(LED_BUILTIN, HIGH);
 			break;
