@@ -1,11 +1,7 @@
-#include "wifi_functions.h"
-#include "mqtt_functions.h"
-#include "battery.h"
-#include "memory.h"
-#include "pumps.h"
-#include "sensors.h"
-#include <time.h>
 #include "global.h"
+#include "logging.h"
+#include <time.h>
+
 
 // For hmac SHA256 encryption
 #include <mbedtls/base64.h>
@@ -13,8 +9,14 @@
 #include <mbedtls/sha256.h>
 
 #include <azure_ca.h>
-#include "logging.h"
 #include "Azure_IoT_PnP_Template.h"
+
+#include "wifi_functions.h"
+#include "mqtt_functions.h"
+#include "battery.h"
+#include "memory.h"
+#include "pumps.h"
+#include "sensors.h"
 
 /* --- Sample-specific Settings --- */
 #define SERIAL_LOGGER_BAUD_RATE 115200
@@ -27,7 +29,7 @@
 #define GMT_OFFSET_SECS_DST ((PST_TIME_ZONE + PST_TIME_ZONE_DAYLIGHT_SAVINGS_DIFF) * 3600)
 
 /* --- Function Declarations --- */
-static void sync_device_clock_with_ntp_server();
+static void syncDeviceClockWithNtpServer();
 
 /* --- Other Interface functions required by Azure IoT --- */
 /*
@@ -103,7 +105,8 @@ static void on_command_request_received(command_request_t command)
 	(void)azure_pnp_handle_command_request(&azure_iot, command);
 }
 
-void azure_iot_setup(){
+void azureIotSetup(){
+	azure_pnp_init();
 	/* 	
 	* The configuration structure used by Azure IoT must remain unchanged (including data buffer) 
 	* throughout the lifetime of the sample. This variable must also not lose context so other
@@ -135,30 +138,44 @@ void azure_iot_setup(){
 	azure_iot_init(&azure_iot, &azure_iot_config);
 	azure_iot_start(&azure_iot);
 	LogInfo("Azure IoT client initialized (state=%d)", azure_iot.state);
-	switch(azure_iot_get_status(&azure_iot))
-    {
-		case azure_iot_connected:
-			mqttConnected = true;
-			if (send_device_info)
+	// Connect
+  	azure_iot_status_t status = azure_iot_status_t::azure_iot_connecting;
+	while(status!=azure_iot_status_t::azure_iot_connected){
+		if (WiFi.status() != WL_CONNECTED)
+		{
+			LogInfo("Wifi not connected");
+			wifiWpsConnect();
+			azure_iot_start(&azure_iot);
+		}
+		else
+		{
+			status = azure_iot_get_status(&azure_iot);
+			switch(status)
 			{
-				(void)azure_pnp_send_device_info(&azure_iot, properties_request_id++);
-				send_device_info = false; // Only need to send once.
+				case azure_iot_connected:
+					LogInfo("Connected");
+					mqttConnected = true;
+					if (send_device_info)
+					{
+						LogInfo("Sending device infos");
+						(void)azure_pnp_send_device_info(&azure_iot, properties_request_id++);
+						send_device_info = false; // Only need to send once.
+					}
+					break;
+				case azure_iot_error:
+					LogError("Azure IoT client is in error state." );
+					mqttConnected = false;
+					azure_iot_stop(&azure_iot);
+					wifiDisconnect();
+					break;
+				default:
+					LogInfo("Status: %i", status);
+					break;
 			}
-			else if (azure_pnp_send_telemetry(&azure_iot) != 0)
-			{
-				LogError("Failed sending telemetry.");          
-			}
-			break;
-		case azure_iot_error:
-			LogError("Azure IoT client is in error state." );
-			mqttConnected = false;
-			azure_iot_stop(&azure_iot);
-			wifiDisconnect();
-			break;
-		default:
-			break;
-    }
-    azure_iot_do_work(&azure_iot);
+		}
+		azure_iot_do_work(&azure_iot);
+		delay(500);
+	}
 }
 
 void setup() {
@@ -186,85 +203,88 @@ void setup() {
 	// Connect to Wifi and MQTT broker
 	wifiWpsConnect();
 	//Sync time
-	sync_device_clock_with_ntp_server();
+	syncDeviceClockWithNtpServer();
 	// Connect Azure IoT
-	azure_pnp_init();
-	azure_iot_setup();
-	if(!WiFi.isConnected() | !mqttConnected){
-		// Stop the client, otherwise it'll attempt to connect again
-		getSensorVarsFromMemory();
-		getPumpVarsFromMemory();
-		getGeneralVarsFromMemory();
-	}
+	azureIotSetup();
+	// if(!WiFi.isConnected() | !mqttConnected){
+	// 	// Stop the client, otherwise it'll attempt to connect again
+	// 	getSensorVarsFromMemory();
+	// 	getPumpVarsFromMemory();
+	// 	getGeneralVarsFromMemory();
+	// }
 	// Read all sensors at once
 	readAllSensors();
-	// Start memory
-	preferences.begin(variablesNamespace, false);
-	// Get the last time the pump was run
-	// and compute the seconds since it happenend
-	time_t diffTime[numPlants] {0};
-	for(uint8_t i=0;i<numPlants;i++){
-		diffTime[i] = difftime(time(NULL), pumpState[i].lastRunMemoryVar.value);
-		LogInfo("Seconds since last run: %i", diffTime[i]);
-		LogInfo("diffTime >= wateringTime: %i", diffTime[i] >= (wateringTime[i].memoryVar.value * 3600));
-		LogInfo("soilMoisture < moistureTresh: %i", soilMoisture[i].percVoltage.value < moistureTresh[i].memoryVar.value);
-		if(pumpOverride[i].memoryVar.value || (pumpSwitch[i].memoryVar.value && (diffTime[i] >= (wateringTime[i].memoryVar.value * 3600)) && (soilMoisture[i].percVoltage.value < moistureTresh[i].memoryVar.value))){
-			LogInfo("Running pump for %i seconds", pumpRuntime[i].memoryVar.value);
-			digitalWrite(pumpPins[i], HIGH);
-			if(mqttConnected){
-				esp_mqtt_client_publish(mqtt_client, pumpState[i].stateTopic.c_str(), "on", 2, 1, 0);
-				delay(pumpRuntime[i].memoryVar.value * sToMs);
-				digitalWrite(pumpPins[i], LOW);
-				esp_mqtt_client_publish(mqtt_client, pumpState[i].stateTopic.c_str(), "off", 3, 1, 0);
-			} else {
-				delay(pumpRuntime[i].memoryVar.value * sToMs);
-				digitalWrite(pumpPins[i], LOW);
-			}
-			// Set the last time the pump was run
-			pumpState[i].lastRunMemoryVar.setValue(time(NULL));
-		}
-		else{
-			LogInfo("Condition to water plant not met, pump is off");
-			if(mqttConnected){
-				esp_mqtt_client_publish(mqtt_client, pumpState[i].stateTopic.c_str(), "off", 3, 1, 0);
-			}
-		}
+	if (azure_pnp_send_telemetry(&azure_iot) != 0)
+	{
+		LogError("Failed sending telemetry.");          
 	}
-	preferences.end();
-	delay(1000);
-	if(mqttConnected){
-		// Send an off state to mean the pump/board is going to sleep and disconnect
-		for(uint8_t i=0;i<numPlants;i++){
-			esp_mqtt_client_publish(mqtt_client, pumpState[i].availabilityTopic.c_str(), "off", 3, 1, 0);
-		}
-		//Send battery voltage
-		createJson<float>(batteryVoltage);
-		esp_mqtt_client_publish(mqtt_client, "battery/state", buffer, 0, 1, 1);
-	}
-	// Deep sleep
-	// The following lines disable all RTC features except the timer
-	esp_sleep_pd_config(ESP_PD_DOMAIN_MAX, ESP_PD_OPTION_OFF);
-	esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_PERIPH, ESP_PD_OPTION_OFF);
-	esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_SLOW_MEM, ESP_PD_OPTION_OFF);
-	esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_FAST_MEM, ESP_PD_OPTION_OFF);
-	// If battery voltage is too low, set deep sleep to be infinite (i.e. hibernate)
-	if(batteryVoltage>CRITICALLY_LOW_BATTERY_VOLTAGE){
-		Serial.println("Setting timer wakeup to "+String(samplingTime.memoryVar.value)+" seconds");
-		esp_sleep_enable_timer_wakeup((unsigned long) samplingTime.memoryVar.value * sToUs);
-		Serial.println("Going into hibernation for "+String(samplingTime.memoryVar.value)+" seconds");
-	}
-	else{
-		Serial.println("Hibernating without timer due to low battery charge.");
-	}
-	// Disconnect
-	if(azure_iot_get_status(&azure_iot) == azure_iot_connected){
-		azure_iot_stop(&azure_iot);
-	}
-	if(WiFi.isConnected()){
-		wifiDisconnect();
-	}
-	// Hibernate
-	esp_deep_sleep_start();
+	// // Start memory
+	// preferences.begin(variablesNamespace, false);
+	// // Get the last time the pump was run
+	// // and compute the seconds since it happenend
+	// time_t diffTime[numPlants] {0};
+	// for(uint8_t i=0;i<numPlants;i++){
+	// 	diffTime[i] = difftime(time(NULL), pumpState[i].lastRunMemoryVar.value);
+	// 	LogInfo("Seconds since last run: %i", diffTime[i]);
+	// 	LogInfo("diffTime >= wateringTime: %i", diffTime[i] >= (wateringTime[i].memoryVar.value * 3600));
+	// 	LogInfo("soilMoisture < moistureTresh: %i", soilMoisture[i].percVoltage.value < moistureTresh[i].memoryVar.value);
+	// 	if(pumpOverride[i].memoryVar.value || (pumpSwitch[i].memoryVar.value && (diffTime[i] >= (wateringTime[i].memoryVar.value * 3600)) && (soilMoisture[i].percVoltage.value < moistureTresh[i].memoryVar.value))){
+	// 		LogInfo("Running pump for %i seconds", pumpRuntime[i].memoryVar.value);
+	// 		digitalWrite(pumpPins[i], HIGH);
+	// 		if(mqttConnected){
+	// 			esp_mqtt_client_publish(mqtt_client, pumpState[i].stateTopic.c_str(), "on", 2, 1, 0);
+	// 			delay(pumpRuntime[i].memoryVar.value * sToMs);
+	// 			digitalWrite(pumpPins[i], LOW);
+	// 			esp_mqtt_client_publish(mqtt_client, pumpState[i].stateTopic.c_str(), "off", 3, 1, 0);
+	// 		} else {
+	// 			delay(pumpRuntime[i].memoryVar.value * sToMs);
+	// 			digitalWrite(pumpPins[i], LOW);
+	// 		}
+	// 		// Set the last time the pump was run
+	// 		pumpState[i].lastRunMemoryVar.setValue(time(NULL));
+	// 	}
+	// 	else{
+	// 		LogInfo("Condition to water plant not met, pump is off");
+	// 		if(mqttConnected){
+	// 			esp_mqtt_client_publish(mqtt_client, pumpState[i].stateTopic.c_str(), "off", 3, 1, 0);
+	// 		}
+	// 	}
+	// }
+	// preferences.end();
+	// delay(1000);
+	// if(mqttConnected){
+	// 	// Send an off state to mean the pump/board is going to sleep and disconnect
+	// 	for(uint8_t i=0;i<numPlants;i++){
+	// 		esp_mqtt_client_publish(mqtt_client, pumpState[i].availabilityTopic.c_str(), "off", 3, 1, 0);
+	// 	}
+	// 	//Send battery voltage
+	// 	createJson<float>(batteryVoltage);
+	// 	esp_mqtt_client_publish(mqtt_client, "battery/state", buffer, 0, 1, 1);
+	// }
+	// // Deep sleep
+	// // The following lines disable all RTC features except the timer
+	// esp_sleep_pd_config(ESP_PD_DOMAIN_MAX, ESP_PD_OPTION_OFF);
+	// esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_PERIPH, ESP_PD_OPTION_OFF);
+	// esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_SLOW_MEM, ESP_PD_OPTION_OFF);
+	// esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_FAST_MEM, ESP_PD_OPTION_OFF);
+	// // If battery voltage is too low, set deep sleep to be infinite (i.e. hibernate)
+	// if(batteryVoltage>CRITICALLY_LOW_BATTERY_VOLTAGE){
+	// 	Serial.println("Setting timer wakeup to "+String(samplingTime.memoryVar.value)+" seconds");
+	// 	esp_sleep_enable_timer_wakeup((unsigned long) samplingTime.memoryVar.value * sToUs);
+	// 	Serial.println("Going into hibernation for "+String(samplingTime.memoryVar.value)+" seconds");
+	// }
+	// else{
+	// 	Serial.println("Hibernating without timer due to low battery charge.");
+	// }
+	// // Disconnect
+	// if(azure_iot_get_status(&azure_iot) == azure_iot_connected){
+	// 	azure_iot_stop(&azure_iot);
+	// }
+	// if(WiFi.isConnected()){
+	// 	wifiDisconnect();
+	// }
+	// // Hibernate
+	// esp_deep_sleep_start();
 }
 
 void loop() {}
@@ -278,7 +298,7 @@ void loop() {}
  */
 
 /* --- System and Platform Functions --- */
-static void sync_device_clock_with_ntp_server()
+static void syncDeviceClockWithNtpServer()
 {
 	LogInfo("Setting time using SNTP");
 	configTime(GMT_OFFSET_SECS, GMT_OFFSET_SECS_DST, NTP_SERVERS);

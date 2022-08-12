@@ -36,7 +36,7 @@ static esp_err_t messageHandler(esp_mqtt_event_handle_t event){
 	ms.Target(event->topic);
 	char result = ms.Match("[%a/]*/(%a+)/(%d+)/[%a/]*");
 	if (result == REGEXP_MATCHED) {
-		LogInfo("Received command/value from %s", event_topic);
+		LogInfo("Received command/value from %s", event_topic.c_str());
 		char buf[100];
 		String match_string = ms.GetCapture(buf, 0);
 		uint8_t index = atoi(ms.GetCapture(buf, 1));
@@ -92,7 +92,7 @@ static esp_err_t messageHandler(esp_mqtt_event_handle_t event){
 			LogInfo("Watering Time %i value: %i", index, wateringTime[index].memoryVar.value);
 		}
 		else{
-			LogInfo("Received unknown topic %s", event_topic);
+			LogInfo("Received unknown topic %s", event_topic.c_str());
 		}
 		preferences.end();
 	}
@@ -141,23 +141,23 @@ static esp_err_t mqttEventCallbackHandler(esp_mqtt_event_handle_t event) {
 			{
 				LogError("azure_iot_mqtt_client_connected failed.");
 			}
-			LogInfo("Fetching variables from the broker.");
-			mqttConnected = true;
-			for(uint8_t i=0;i<numPlants;i++){
-				// Send an on state to mean the pump/board has started and is connected
-				esp_mqtt_client_publish(mqtt_client, pumpState[i].availabilityTopic.c_str(), "on", 2, 1, 0);
-				esp_mqtt_client_publish(mqtt_client, pumpState[i].stateTopic.c_str(), "off", 3, 1, 1);
-				// Subscriptions
-				esp_mqtt_client_subscribe(mqtt_client, wateringTime[i].stateTopic.c_str(), 1);
-				esp_mqtt_client_subscribe(mqtt_client, moistureTresh[i].stateTopic.c_str(), 1);
-				esp_mqtt_client_subscribe(mqtt_client, pumpOverride[i].commandTopic.c_str(), 1);
-				esp_mqtt_client_subscribe(mqtt_client, pumpSwitch[i].commandTopic.c_str(), 1);
-				esp_mqtt_client_subscribe(mqtt_client, pumpRuntime[i].stateTopic.c_str(), 1);
-			}
-			esp_mqtt_client_subscribe(mqtt_client, airValue.stateTopic.c_str(), 1);
-			esp_mqtt_client_subscribe(mqtt_client, waterValue.stateTopic.c_str(), 1);
-			esp_mqtt_client_subscribe(mqtt_client, samplingTime.stateTopic.c_str(), 1);
-			LogInfo("Subscribed to all topics");
+			// LogInfo("Fetching variables from the broker.");
+			// mqttConnected = true;
+			// for(uint8_t i=0;i<numPlants;i++){
+			// 	// Send an on state to mean the pump/board has started and is connected
+			// 	esp_mqtt_client_publish(mqtt_client, pumpState[i].availabilityTopic.c_str(), "on", 2, 1, 0);
+			// 	esp_mqtt_client_publish(mqtt_client, pumpState[i].stateTopic.c_str(), "off", 3, 1, 1);
+			// 	// Subscriptions
+			// 	esp_mqtt_client_subscribe(mqtt_client, wateringTime[i].stateTopic.c_str(), 1);
+			// 	esp_mqtt_client_subscribe(mqtt_client, moistureTresh[i].stateTopic.c_str(), 1);
+			// 	esp_mqtt_client_subscribe(mqtt_client, pumpOverride[i].commandTopic.c_str(), 1);
+			// 	esp_mqtt_client_subscribe(mqtt_client, pumpSwitch[i].commandTopic.c_str(), 1);
+			// 	esp_mqtt_client_subscribe(mqtt_client, pumpRuntime[i].stateTopic.c_str(), 1);
+			// }
+			// esp_mqtt_client_subscribe(mqtt_client, airValue.stateTopic.c_str(), 1);
+			// esp_mqtt_client_subscribe(mqtt_client, waterValue.stateTopic.c_str(), 1);
+			// esp_mqtt_client_subscribe(mqtt_client, samplingTime.stateTopic.c_str(), 1);
+			// LogInfo("Subscribed to all topics");
 			break;
 		case MQTT_EVENT_DISCONNECTED:
 			LogInfo("MQTT event: %d. MQTT_EVENT_DISCONNECTED", event->event_id);
