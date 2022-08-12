@@ -161,7 +161,7 @@ static esp_err_t mqttEventCallbackHandler(esp_mqtt_event_handle_t event) {
 			LogInfo("Subscribed to all topics");
 			break;
 		case MQTT_EVENT_DISCONNECTED:
-			LogInfo("TEST", "MQTT event: %d. MQTT_EVENT_DISCONNECTED", event->event_id);
+			LogInfo("MQTT event: %d. MQTT_EVENT_DISCONNECTED", event->event_id);
 			if (azure_iot_mqtt_client_disconnected(&azure_iot) != 0)
 			{
 				LogError("azure_iot_mqtt_client_disconnected failed.");
@@ -169,25 +169,25 @@ static esp_err_t mqttEventCallbackHandler(esp_mqtt_event_handle_t event) {
 			mqttConnected = false;
 			break;
 		case MQTT_EVENT_SUBSCRIBED:
-			LogInfo("TEST", "MQTT msgid= %d event: %d. MQTT_EVENT_SUBSCRIBED", event->msg_id, event->event_id);
+			LogInfo("MQTT msgid= %d event: %d. MQTT_EVENT_SUBSCRIBED", event->msg_id, event->event_id);
 			if (azure_iot_mqtt_client_subscribe_completed(&azure_iot, event->msg_id) != 0)
 			{
 				LogError("azure_iot_mqtt_client_subscribe_completed failed.");
 			}
 			break;
 		case MQTT_EVENT_UNSUBSCRIBED:
-			LogInfo("TEST", "MQTT msgid= %d event: %d. MQTT_EVENT_UNSUBSCRIBED", event->msg_id, event->event_id);
+			LogInfo("MQTT msgid= %d event: %d. MQTT_EVENT_UNSUBSCRIBED", event->msg_id, event->event_id);
 			break;
 		case MQTT_EVENT_PUBLISHED:
-			LogInfo("TEST", "MQTT event: %d. MQTT_EVENT_PUBLISHED", event->event_id);
+			LogInfo("MQTT event: %d. MQTT_EVENT_PUBLISHED", event->event_id);
 			if (azure_iot_mqtt_client_publish_completed(&azure_iot, event->msg_id) != 0)
 			{
 				LogError("azure_iot_mqtt_client_publish_completed failed (message id=%d).", event->msg_id);
 			}
 			break;
 		case MQTT_EVENT_DATA:
-			LogInfo("TEST", "MQTT msgid= %d event: %d. MQTT_EVENT_DATA", event->msg_id, event->event_id);
-			LogInfo("TEST", "Topic length %d. Data length %d", event->topic_len, event->data_len);
+			LogInfo("MQTT msgid= %d event: %d. MQTT_EVENT_DATA", event->msg_id, event->event_id);
+			LogInfo("Topic length %d. Data length %d", event->topic_len, event->data_len);
 			LogInfo("TEST","Incoming data: %.*s %.*s\n", event->topic_len, event->topic, event->data_len, event->data);
 			mqtt_message_t mqtt_message;
 			mqtt_message.topic = az_span_create((uint8_t*)event->topic, event->topic_len);

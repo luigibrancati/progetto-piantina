@@ -73,7 +73,7 @@ void WiFiEvent(WiFiEvent_t event, arduino_event_info_t info){
 			WiFi.reconnect();
 			break;
 		case ARDUINO_EVENT_WPS_ER_SUCCESS:
-			LogInfo("WPS Successfull, stopping WPS and connecting to: %s", WiFi.SSID());
+			LogInfo("WPS Successfull, stopping WPS and connecting to: %s", WiFi.SSID().c_str());
 			wpsStop();
 			delay(10);
 			WiFi.begin();
