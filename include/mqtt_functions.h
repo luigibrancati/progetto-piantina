@@ -21,7 +21,6 @@
 #define MQTT_DO_NOT_RETAIN_MSG 0
 #define AZ_IOT_DATA_BUFFER_SIZE 1500
 
-static esp_mqtt_client_config_t mqtt_cfg = {};
 static char mqtt_broker_uri[128];
 /* --- Sample variables --- */
 static azure_iot_config_t azure_iot_config;
@@ -217,6 +216,7 @@ static esp_err_t mqttEventCallbackHandler(esp_mqtt_event_handle_t event) {
  */
 static int mqtt_client_init_function(mqtt_client_config_t* mqtt_client_config, mqtt_client_handle_t *mqtt_client_handle)
 {
+	LogInfo("Initializing MQTT client");
 	int result;
 	esp_mqtt_client_config_t mqtt_config;
 	memset(&mqtt_config, 0, sizeof(mqtt_config));  
@@ -231,12 +231,12 @@ static int mqtt_client_init_function(mqtt_client_config_t* mqtt_client_config, m
 	mqtt_config.client_id = (const char*)az_span_ptr(mqtt_client_config->client_id);
 	mqtt_config.username = (const char*)az_span_ptr(mqtt_client_config->username);
 	mqtt_config.password = (const char*)az_span_ptr(mqtt_client_config->password);	
-
 	mqtt_config.keepalive = 30;
 	mqtt_config.disable_clean_session = 0;
 	mqtt_config.disable_auto_reconnect = false;
 	mqtt_config.event_handle = mqttEventCallbackHandler;
 	mqtt_config.user_context = NULL;
+	mqtt_config.cert_pem = (const char*)ca_pem;
 	LogInfo("MQTT client target uri set to '%s'", mqtt_broker_uri);
 	mqtt_client = esp_mqtt_client_init(&mqtt_config);
 	if (mqtt_client == NULL)
